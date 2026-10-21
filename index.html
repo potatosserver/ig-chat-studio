@@ -8,7 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Google Fonts: Inter & Material Symbols -->
+  <!-- Google Fonts: Plus Jakarta Sans & Material Symbols -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -22,8 +22,6 @@
       --ig-text-other: #1c1e21;
       --ig-text-me: #ffffff;
       --m3-surface: #fafafa;
-      --m3-surface-container: #ffffff;
-      --m3-outline-variant: #e5e7eb;
     }
     * { 
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, 'Noto Sans TC', sans-serif; 
@@ -49,7 +47,6 @@
     .smooth-scroll::-webkit-scrollbar-track { background: transparent; }
     .smooth-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 999px; }
 
-    /* M3 Tonal Bubbles */
     .bubble-other { background-color: var(--ig-bubble-other); color: var(--ig-text-other); border-radius: 20px; }
     .bubble-me { background-color: var(--ig-bubble-me); color: var(--ig-text-me); border-radius: 20px; }
     .bubble-meta { background: var(--ig-bubble-meta); color: #ffffff; border-radius: 20px; }
@@ -101,7 +98,7 @@
 <body class="flex flex-col md:flex-row select-none bg-[#fafafa]">
 
   <!-- ============================================== -->
-  <!-- 導覽列 (M3 Navigation Rail / Bar) -->
+  <!-- 導覽列 (M3 Navigation Rail) -->
   <!-- ============================================== -->
   <nav id="navBar" class="order-2 md:order-1 bg-white border-t md:border-t-0 md:border-r border-[#e5e7eb] z-30 w-full md:w-20 md:h-full shrink-0 flex items-center shadow-xs">
     <div class="flex flex-row md:flex-col justify-around md:justify-evenly items-center w-full h-full py-1 md:py-6 px-1">
@@ -137,7 +134,7 @@
   <!-- ============================================== -->
   <main id="mainContainer" class="order-1 md:order-2 flex-1 w-full h-full relative overflow-hidden bg-[#fafafa]">
 
-    <!-- 上傳提示遮罩 (M3 Tonal Card) -->
+    <!-- 上傳提示遮罩 -->
     <div id="uploadOverlay" class="absolute inset-0 bg-[#fafafa] z-40 flex items-center justify-center p-4">
       <div class="bg-white border border-[#e5e7eb] rounded-3xl p-8 max-w-md w-full text-center space-y-5 shadow-sm" id="dropZone">
         <input type="file" id="folderInput" webkitdirectory directory multiple class="hidden">
@@ -161,28 +158,26 @@
     </div>
 
     <!-- -------------------------------------------- -->
-    <!-- 1. 首頁 (M3 極簡數據總覽) -->
+    <!-- 1. 首頁 -->
     <!-- -------------------------------------------- -->
     <section id="tabContentHome" class="absolute inset-0 overflow-y-auto smooth-scroll p-4 md:p-8 space-y-5">
       <div class="text-center py-2 border-b border-slate-200/60">
         <h1 class="text-3xl font-serif italic font-extrabold tracking-wide text-slate-900">𝑰𝑮 𝑪𝒉𝒂𝒕 𝑺𝒕𝒖𝒅𝒊𝒐</h1>
       </div>
 
-      <!-- 篩選卡片 (M3 Elevated) -->
+      <!-- 篩選卡片 -->
       <div class="bg-white p-4 rounded-3xl border border-[#e5e7eb] shadow-xs space-y-3">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div class="flex items-center gap-1.5 text-slate-800">
             <span class="material-symbols-outlined text-[20px] text-[#3797f0]">tune</span>
             <span class="text-xs font-bold">過濾條件</span>
           </div>
-          <!-- 僅私訊 -->
           <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200/70 hover:bg-slate-100 transition">
             <input type="checkbox" id="chkOnlyDM" class="w-4 h-4 text-[#3797f0] rounded border-slate-300 focus:ring-0">
             <span>僅顯示 1 對 1 私訊</span>
           </label>
         </div>
 
-        <!-- 雙頭時間拉桿 -->
         <div class="space-y-1.5 pt-1">
           <div class="flex justify-between items-center text-[11px] text-slate-500 font-medium">
             <span>時間區間</span>
@@ -217,7 +212,6 @@
         </div>
       </div>
 
-      <!-- 圖表區塊 -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 pb-6">
         <div class="bg-white p-5 rounded-3xl border border-[#e5e7eb] shadow-xs flex flex-col justify-between">
           <div class="flex justify-between items-center mb-2">
@@ -235,7 +229,7 @@
     </section>
 
     <!-- -------------------------------------------- -->
-    <!-- 2. 訊息整合區 (M3 精緻風格) -->
+    <!-- 2. 訊息整合區 -->
     <!-- -------------------------------------------- -->
     <section id="tabContentMessages" class="mobile-view-list hidden absolute inset-0 bg-white overflow-hidden flex flex-row">
       
@@ -250,35 +244,48 @@
       <!-- 對話視窗 -->
       <div id="chatRoomCol" class="h-full flex-1 flex flex-col bg-white overflow-hidden relative z-20">
         
-        <!-- 頂部資訊列 (M3 Top App Bar) -->
+        <!-- 頂部資訊列 (固定順序：圖表檢視、清除按鈕、下載/打招呼、模式切換) -->
         <div class="px-3.5 py-2.5 border-b border-[#e5e7eb] flex items-center justify-between bg-white shrink-0 z-20 gap-2">
           
-          <!-- 左側：返回鍵與多人頭像群組 (至少顯示前 3 人 + N 人標記) -->
+          <!-- 左側：返回鍵 + 單一頭像 + 名稱 + 人數 -->
           <div class="flex items-center gap-2.5 min-w-0">
             <button id="btnBackChatList" class="md:hidden p-1.5 -ml-1 text-slate-700 hover:bg-slate-100 rounded-full shrink-0 transition">
               <span class="material-symbols-outlined text-[24px]">arrow_back</span>
             </button>
             
-            <!-- 多人重疊頭像容器 -->
-            <div id="headerAvatarGroup" class="flex -space-x-2.5 overflow-hidden items-center shrink-0"></div>
+            <div id="headerSingleAvatar" class="shrink-0"></div>
             
             <div class="min-w-0">
-              <div class="flex items-center gap-1.5">
-                <h3 id="chatTitleHeader" class="text-sm font-bold text-slate-900 truncate max-w-[110px] sm:max-w-[200px]">選擇聊天室</h3>
-                <span id="chatOnlineBadge" class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.2 rounded-full font-bold hidden shrink-0 border border-emerald-200/50">在線</span>
-              </div>
-              <p id="chatSubHeader" class="text-[11px] text-slate-400 truncate">0 則紀錄</p>
+              <h3 id="chatTitleHeader" class="text-sm font-bold text-slate-900 truncate max-w-[120px] sm:max-w-[200px]">選擇聊天室</h3>
+              <p id="chatSubHeader" class="text-[11px] text-slate-400 truncate">0 位成員</p>
             </div>
           </div>
 
-          <!-- 右側功能區 (M3 Segmented & Action Buttons) -->
-          <div class="flex items-center gap-1.5 shrink-0">
-            <button id="btnOpenRoomStats" title="數據分析" class="p-2 text-slate-600 hover:text-[#3797f0] rounded-xl hover:bg-slate-100 flex items-center transition">
+          <!-- 右側功能區：固定順序【圖表檢視】->【清除按鈕】->【下載/打招呼】->【模式切換鍵(最右)】 -->
+          <div class="flex items-center gap-1 shrink-0">
+            <!-- 1. 圖表檢視按鈕 -->
+            <button id="btnOpenRoomStats" title="數據分析" class="w-9 h-9 text-slate-600 hover:text-[#3797f0] rounded-xl hover:bg-slate-100 flex items-center justify-center transition">
               <span class="material-symbols-outlined text-[20px]">analytics</span>
             </button>
 
-            <!-- 模式切換 Switch (M3 Segmented Button) -->
-            <div class="bg-slate-100 p-1 rounded-2xl flex items-center text-[11px] font-bold">
+            <!-- 2. 清除按鈕 (歷史模式: 清除問答 / AI模式: 清除模擬記憶) -->
+            <button id="btnHistoryClearAi" title="清除 AI 問答紀錄" class="w-9 h-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition">
+              <span class="material-symbols-outlined text-[20px]">delete_sweep</span>
+            </button>
+            <button id="btnAiClearMem" title="清除 AI 對話紀錄" class="hidden w-9 h-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition">
+              <span class="material-symbols-outlined text-[20px]">delete_sweep</span>
+            </button>
+
+            <!-- 3. 下載按鈕 (歷史) / 打招呼 (AI) -->
+            <button id="btnExportJson" title="導出 JSON" class="w-9 h-9 text-slate-500 hover:text-slate-800 rounded-xl hover:bg-slate-100 flex items-center justify-center transition">
+              <span class="material-symbols-outlined text-[20px]">download</span>
+            </button>
+            <button id="btnAiNudgeAction" title="打招呼" class="hidden w-9 h-9 text-slate-600 hover:text-amber-500 rounded-xl hover:bg-slate-100 flex items-center justify-center transition">
+              <span class="material-symbols-outlined text-[20px]">waving_hand</span>
+            </button>
+
+            <!-- 4. 模式切換 Segmented Button (固定於最右側) -->
+            <div class="bg-slate-100 p-1 rounded-2xl flex items-center text-[11px] font-bold ml-1">
               <button id="modeBtnHistory" class="px-3 py-1 rounded-xl bg-white text-slate-900 shadow-xs flex items-center gap-1 transition">
                 <span class="material-symbols-outlined text-[15px]">history</span>
                 <span>歷史</span>
@@ -288,22 +295,6 @@
                 <span>AI 模擬</span>
               </button>
             </div>
-
-            <!-- 匯出 JSON -->
-            <button id="btnExportJson" title="導出 JSON" class="p-2 text-slate-500 hover:text-slate-800 rounded-xl hover:bg-slate-100 flex items-center transition">
-              <span class="material-symbols-outlined text-[20px]">download</span>
-            </button>
-
-            <!-- AI 專用：清除記憶 -->
-            <button id="btnAiClearMem" title="清除 AI 對話紀錄" class="hidden p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition">
-              <span class="material-symbols-outlined text-[20px]">delete_sweep</span>
-            </button>
-
-            <!-- AI 專用：打招呼 -->
-            <button id="btnAiNudgeAction" title="主動開話題" class="hidden px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] font-bold rounded-xl transition flex items-center gap-1">
-              <span class="material-symbols-outlined text-[15px]">waving_hand</span>
-              <span>打招呼</span>
-            </button>
           </div>
         </div>
 
@@ -335,7 +326,7 @@
   </main>
 
   <!-- ============================================== -->
-  <!-- 彈窗：單一聊天室深度數據分析 (M3 樣式) -->
+  <!-- 彈窗：單一聊天室深度數據分析 -->
   <!-- ============================================== -->
   <div id="roomStatsModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-slate-100">
@@ -354,7 +345,6 @@
 
       <div class="p-5 overflow-y-auto smooth-scroll space-y-5 flex-1">
         
-        <!-- 破冰與話題收尾統計 (M3 Cards) -->
         <div class="grid grid-cols-2 gap-3.5">
           <div class="bg-slate-50 border border-slate-200/70 p-4 rounded-2xl">
             <div class="flex items-center gap-1.5 text-sky-700 font-bold text-xs">
@@ -375,7 +365,6 @@
           </div>
         </div>
 
-        <!-- 1. 圓餅圖：成員佔比 -->
         <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/70">
           <h4 class="text-xs font-bold text-slate-800 mb-2">發言量比例分佈</h4>
           <div class="relative h-60 w-full flex items-center justify-center">
@@ -383,7 +372,6 @@
           </div>
         </div>
 
-        <!-- 2. GitHub 風格每日熱力圖 -->
         <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/70 space-y-2">
           <div class="flex justify-between items-center">
             <h4 class="text-xs font-bold text-slate-800">活躍熱度日曆</h4>
@@ -403,13 +391,11 @@
           </div>
         </div>
 
-        <!-- 3. 常用 Emoji 與口頭禪 -->
         <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/70 space-y-3">
           <h4 class="text-xs font-bold text-slate-800">各成員常用表情與口頭禪</h4>
           <div id="roomPersonaContainer" class="space-y-3"></div>
         </div>
 
-        <!-- 4. 時段分佈圖 -->
         <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/70">
           <h4 class="text-xs font-bold text-slate-800 mb-2">24 小時傳送時段分佈</h4>
           <div class="relative h-56 w-full">
@@ -421,19 +407,22 @@
     </div>
   </div>
 
-  <!-- 教學彈窗 -->
+  <!-- ============================================== -->
+  <!-- 教學彈窗 (完整保留 6 步驟與圖片容器) -->
+  <!-- ============================================== -->
   <div id="tutorialModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+    <div class="bg-white rounded-3xl max-w-xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl border border-slate-100">
       <div class="p-4 border-b border-[#e5e7eb] flex justify-between items-center">
         <h3 class="font-bold text-sm text-slate-900 flex items-center gap-1.5">
           <span class="material-symbols-outlined text-[#3797f0]">help</span>
-          Instagram 對話匯出指引
+          Instagram 對話紀錄匯出指引
         </h3>
-        <button onclick="document.getElementById('tutorialModal').classList.add('hidden')" class="p-1 rounded-full text-slate-400 hover:bg-slate-100">
+        <button onclick="document.getElementById('tutorialModal').classList.add('hidden')" class="p-1.5 rounded-full text-slate-400 hover:bg-slate-100 transition">
           <span class="material-symbols-outlined text-[20px]">close</span>
         </button>
       </div>
-      <div class="p-5 overflow-y-auto smooth-scroll space-y-4 text-xs text-slate-700">
+
+      <div class="p-5 overflow-y-auto smooth-scroll space-y-5 text-xs text-slate-700">
         <div class="bg-blue-50 text-blue-700 p-3.5 rounded-2xl flex justify-between items-center font-medium">
           <span>前往 Instagram 官方帳戶中心：</span>
           <a href="https://accountscenter.instagram.com/info_and_permissions/dyi/" target="_blank" class="bg-[#3797f0] text-white px-3 py-1.5 rounded-xl font-bold hover:bg-[#1877f2] transition inline-flex items-center gap-1">
@@ -441,8 +430,48 @@
             <span class="material-symbols-outlined text-[14px]">open_in_new</span>
           </a>
         </div>
-        <p class="text-slate-500 leading-relaxed">下載資訊勾選「訊息」，格式務必選擇 <b>JSON</b>。解壓縮後選取資料夾內的 <code>inbox</code> 資料夾載入即可。</p>
+
+        <!-- 6 步驟詳細教學與圖片 -->
+        <div class="space-y-4">
+          <div class="space-y-1.5 border-b border-slate-100 pb-3">
+            <h4 class="font-bold text-slate-900">1. 點擊「建立匯出檔案」</h4>
+            <div class="bg-slate-100 rounded-xl overflow-hidden aspect-video flex items-center justify-center text-slate-400">
+              <img src="img/img1.png" onerror="this.parentElement.innerHTML='<span class=\'p-4\'>[img/img1.png]</span>'" class="w-full h-full object-cover">
+            </div>
+          </div>
+          <div class="space-y-1.5 border-b border-slate-100 pb-3">
+            <h4 class="font-bold text-slate-900">2. 選擇對應的 IG 帳號</h4>
+            <div class="bg-slate-100 rounded-xl overflow-hidden aspect-video flex items-center justify-center text-slate-400">
+              <img src="img/img2.png" onerror="this.parentElement.innerHTML='<span class=\'p-4\'>[img/img2.png]</span>'" class="w-full h-full object-cover">
+            </div>
+          </div>
+          <div class="space-y-1.5 border-b border-slate-100 pb-3">
+            <h4 class="font-bold text-slate-900">3. 匯出目的地選擇「匯出到裝置」</h4>
+            <div class="bg-slate-100 rounded-xl overflow-hidden aspect-video flex items-center justify-center text-slate-400">
+              <img src="img/img3.png" onerror="this.parentElement.innerHTML='<span class=\'p-4\'>[img/img3.png]</span>'" class="w-full h-full object-cover">
+            </div>
+          </div>
+          <div class="space-y-1.5 border-b border-slate-100 pb-3">
+            <h4 class="font-bold text-slate-900">4. 自訂資訊只勾選「訊息」、格式務必選「JSON」</h4>
+            <div class="bg-slate-100 rounded-xl overflow-hidden aspect-video flex items-center justify-center text-slate-400">
+              <img src="img/img4.png" onerror="this.parentElement.innerHTML='<span class=\'p-4\'>[img/img4.png]</span>'" class="w-full h-full object-cover">
+            </div>
+          </div>
+          <div class="space-y-1.5 border-b border-slate-100 pb-3">
+            <h4 class="font-bold text-slate-900">5. 點擊「開始匯出」並輸入密碼驗證</h4>
+            <div class="bg-slate-100 rounded-xl overflow-hidden aspect-video flex items-center justify-center text-slate-400">
+              <img src="img/img5.png" onerror="this.parentElement.innerHTML='<span class=\'p-4\'>[img/img5.png]</span>'" class="w-full h-full object-cover">
+            </div>
+          </div>
+          <div class="space-y-1.5">
+            <h4 class="font-bold text-slate-900">6. 等待 Email 下載通知並解壓縮出 inbox 資料夾</h4>
+            <div class="bg-slate-100 rounded-xl overflow-hidden aspect-video flex items-center justify-center text-slate-400">
+              <img src="img/img6.png" onerror="this.parentElement.innerHTML='<span class=\'p-4\'>[img/img6.png]</span>'" class="w-full h-full object-cover">
+            </div>
+          </div>
+        </div>
       </div>
+
       <div class="p-3.5 bg-slate-50 border-t border-[#e5e7eb] flex justify-end">
         <button id="btnConfirmTutorial" class="bg-[#3797f0] text-white px-5 py-2 rounded-xl text-xs font-bold hover:bg-[#1877f2] transition">我知道了</button>
       </div>
@@ -502,7 +531,7 @@
     let historyRenderStartIndex = 0;
     const CHUNK_SIZE = 80;
 
-    let aiGroupMembers = []; // 保存該聊天室除本人外的全部成員清單 (無省略)
+    let aiGroupMembers = [];
     let isAiWorking = false;
     let abortController = null;
     let activeTypingBubble = null;
@@ -684,9 +713,9 @@
       return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
     }
 
-    function createAvatarEl(name, size = 28) {
+    function createAvatarEl(name, size = 30) {
       const el = document.createElement('div');
-      el.className = 'rounded-full shrink-0 flex items-center justify-center text-white font-bold text-[11px] shadow-xs border-2 border-white';
+      el.className = 'rounded-full shrink-0 flex items-center justify-center text-white font-bold text-xs shadow-xs border-2 border-white';
       const bg = getAvatarColor(name);
       if (bg.includes('gradient')) el.style.background = bg;
       else el.style.backgroundColor = bg;
@@ -953,6 +982,7 @@
     const modeBtnHistory = document.getElementById('modeBtnHistory');
     const modeBtnAi = document.getElementById('modeBtnAi');
     const btnExportJson = document.getElementById('btnExportJson');
+    const btnHistoryClearAi = document.getElementById('btnHistoryClearAi');
     const btnAiClearMem = document.getElementById('btnAiClearMem');
     const btnAiNudgeAction = document.getElementById('btnAiNudgeAction');
     const btnOpenRoomStats = document.getElementById('btnOpenRoomStats');
@@ -990,7 +1020,7 @@
 
     chatSearchInput.addEventListener('input', (e) => initUnifiedChatList(e.target.value.trim()));
 
-    // 開啟對話視窗 (支援多人頭像 3 人 + +N 人標籤；全員完整提示詞收錄)
+    // 開啟對話視窗 (單一質感頭像 + 群組名稱 + 人數)
     async function openChatRoom(chatTitle) {
       currentChatKey = chatTitle;
 
@@ -999,38 +1029,18 @@
       hideNavBarOnMobile();
 
       const pool = chatMap[chatTitle] || [];
-      // 提取全部真人成員名單 (絕不截斷)
       const participantSet = new Set(pool.map(m => m.sender).filter(s => s && s.trim() !== '' && s !== myIdentity && s !== 'Meta AI'));
       aiGroupMembers = Array.from(participantSet);
 
       document.getElementById('chatTitleHeader').innerText = chatTitle;
 
-      // 頂部頭像組渲染：至少展示 3 人，超過者以 +N 徽章表示
-      const avatarBox = document.getElementById('headerAvatarGroup');
-      avatarBox.innerHTML = '';
+      const totalMembersCount = aiGroupMembers.length + (myIdentity ? 1 : 0);
+      document.getElementById('chatSubHeader').innerText = `${totalMembersCount} 位成員`;
 
-      if (aiGroupMembers.length === 0) {
-        avatarBox.appendChild(createAvatarEl(chatTitle, 30));
-      } else if (aiGroupMembers.length === 1) {
-        avatarBox.appendChild(createAvatarEl(aiGroupMembers[0], 30));
-      } else {
-        // 群組：取前 3 位成員顯示
-        const firstThree = aiGroupMembers.slice(0, 3);
-        firstThree.forEach(member => {
-          avatarBox.appendChild(createAvatarEl(member, 28));
-        });
+      const singleAvatarBox = document.getElementById('headerSingleAvatar');
+      singleAvatarBox.innerHTML = '';
+      singleAvatarBox.appendChild(createAvatarEl(chatTitle, 34));
 
-        // 超過 3 人，顯示 +N 徽章
-        if (aiGroupMembers.length > 3) {
-          const remainingCount = aiGroupMembers.length - 3;
-          const moreBadge = document.createElement('div');
-          moreBadge.className = 'w-7 h-7 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-700 shadow-xs shrink-0';
-          moreBadge.innerText = `+${remainingCount}`;
-          avatarBox.appendChild(moreBadge);
-        }
-      }
-
-      // 構建包含「全體成員（無任何遺漏）」的 AI 角色提示詞
       const freq = {};
       pool.forEach(m => freq[m.sender] = (freq[m.sender] || 0) + 1);
       const memberProfiles = aiGroupMembers.map(name => `- 成員「${name}」：歷史累計發言 ${freq[name] || 0} 次。`).join('\n');
@@ -1060,6 +1070,7 @@ ${transcript}
     modeBtnHistory.addEventListener('click', () => switchMode('history'));
     modeBtnAi.addEventListener('click', () => switchMode('ai'));
 
+    // 切換模式：固定按鈕位置與顯示狀態
     async function switchMode(mode, forceRefresh = false) {
       currentMode = mode;
       const msgs = chatMap[currentChatKey] || [];
@@ -1068,14 +1079,13 @@ ${transcript}
         modeBtnHistory.className = 'px-3 py-1 rounded-xl bg-white text-slate-900 shadow-xs flex items-center gap-1 transition';
         modeBtnAi.className = 'px-3 py-1 rounded-xl text-slate-500 hover:text-slate-800 flex items-center gap-1 transition';
 
+        // 歷史模式：顯示下載按鈕、清除問答按鈕；隱藏 AI 專用按鈕
         btnExportJson.classList.remove('hidden');
+        btnHistoryClearAi.classList.remove('hidden');
         btnAiClearMem.classList.add('hidden');
         btnAiNudgeAction.classList.add('hidden');
-        document.getElementById('chatOnlineBadge').classList.add('hidden');
 
-        document.getElementById('chatSubHeader').innerText = `${msgs.length.toLocaleString()} 則紀錄`;
-        
-        unifiedInput.placeholder = "詢問此對話的歷史細節或統計...";
+        unifiedInput.placeholder = "詢問此對話的歷史紀錄或統計...";
         sendBtnIcon.innerText = "psychology";
         sendBtnText.innerText = "問 AI";
 
@@ -1085,16 +1095,20 @@ ${transcript}
         const clusters = groupContinuousMessages(initialBatch);
         clusters.forEach(c => renderMessageCluster(c, chatMessageFlow, 'bottom'));
 
+        const savedQa = (await dbGet("ai_history", `qa_${currentChatKey}`)) || [];
+        savedQa.forEach(item => {
+          renderHistoryQaCard(item.question, item.answer, chatMessageFlow);
+        });
+
       } else {
         modeBtnAi.className = 'px-3 py-1 rounded-xl bg-white text-slate-900 shadow-xs flex items-center gap-1 transition';
         modeBtnHistory.className = 'px-3 py-1 rounded-xl text-slate-500 hover:text-slate-800 flex items-center gap-1 transition';
 
+        // AI 模式：顯示打招呼、清除模擬記憶；隱藏歷史專用按鈕
         btnExportJson.classList.add('hidden');
+        btnHistoryClearAi.classList.add('hidden');
         btnAiClearMem.classList.remove('hidden');
         btnAiNudgeAction.classList.remove('hidden');
-        document.getElementById('chatOnlineBadge').classList.remove('hidden');
-
-        document.getElementById('chatSubHeader').innerText = `${aiGroupMembers.length} 位成員全員在線`;
 
         unifiedInput.placeholder = "輸入訊息，輸入 @ 可提及成員...";
         sendBtnIcon.innerText = "send";
@@ -1158,7 +1172,6 @@ ${transcript}
       const stopperCounts = {};
       const SIX_HOURS_MS = 6 * 3600 * 1000;
 
-      // 雜訊過濾
       const sysNoticeRegex = /(liked a message|reacted .* to your message|video chat ended|started a video chat|audio call|missed call|傳送了.*個?附件|發送了.*個?附件|分享了.*的貼文|回覆了你的限時動態|已傳送語音訊息|已收回訊息|你已標註|移除了一則訊息)/i;
       const emojiRegex = /(\p{Extended_Pictographic}|\p{Emoji_Presentation})/gu;
 
@@ -1173,7 +1186,6 @@ ${transcript}
 
       const humanMsgs = msgs.filter(m => m.sender && m.sender !== 'Meta AI');
 
-      // 1. 破冰與話題收尾
       for (let i = 0; i < humanMsgs.length - 1; i++) {
         const cur = humanMsgs[i];
         const next = humanMsgs[i + 1];
@@ -1185,7 +1197,6 @@ ${transcript}
         }
       }
 
-      // 2. 統計發言量、熱力圖、Emoji 與口頭禪
       humanMsgs.forEach(m => {
         senderCounts[m.sender] = (senderCounts[m.sender] || 0) + 1;
         hours[m.date.getHours()]++;
@@ -1231,7 +1242,6 @@ ${transcript}
       document.getElementById('statIcebreakerText').innerText = topIcebreaker ? `${topIcebreaker[0]} (${topIcebreaker[1]} 次)` : '無';
       document.getElementById('statStopperText').innerText = topStopper ? `${topStopper[0]} (${topStopper[1]} 次)` : '無';
 
-      // 3. 圓餅圖
       const sortedSenders = Object.entries(senderCounts).sort((a,b) => b[1] - a[1]);
       const labels = sortedSenders.map(x => x[0]);
       const data = sortedSenders.map(x => x[1]);
@@ -1270,13 +1280,9 @@ ${transcript}
         }
       });
 
-      // 4. 熱力圖
       renderHeatmap(dailyHeatmapMap);
-
-      // 5. 渲染每人卡片
       renderPersonas(labels, senderEmojis, senderWords, icebreakerCounts, stopperCounts);
 
-      // 6. 時段分佈
       const ctxTime = document.getElementById('roomTimeChart').getContext('2d');
       if (chartInstances.roomTime) chartInstances.roomTime.destroy();
 
@@ -1412,8 +1418,19 @@ ${transcript}
       a.click();
     });
 
+    // 歷史模式：清除 AI 問答紀錄
+    btnHistoryClearAi.addEventListener('click', async () => {
+      if (!currentChatKey) return;
+      if (confirm(`確定清除與「${currentChatKey}」的所有 AI 問答紀錄？`)) {
+        await dbPut("ai_history", `qa_${currentChatKey}`, []);
+        switchMode('history', true);
+      }
+    });
+
+    // AI 模式：清除模擬紀錄
     btnAiClearMem.addEventListener('click', async () => {
-      if (confirm(`確定清除與「${currentChatKey}」的 AI 對話紀錄？`)) {
+      if (!currentChatKey) return;
+      if (confirm(`確定清除與「${currentChatKey}」的 AI 模擬紀錄？`)) {
         await dbPut("ai_history", currentChatKey, []);
         chatMessageFlow.innerHTML = '';
       }
@@ -1489,6 +1506,25 @@ ${transcript}
         await saveAiHistory(currentChatKey, userMsgObj);
         triggerAiSimulationResponse(text, false);
       }
+    }
+
+    function renderHistoryQaCard(question, answer, container) {
+      const userQ = { sender: myIdentity || '我', content: question, timestamp_ms: Date.now() };
+      renderMessageCluster([userQ], container, 'bottom');
+
+      const analysisCard = document.createElement('div');
+      analysisCard.className = 'flex gap-2 items-start w-full mb-2';
+      analysisCard.innerHTML = `
+        <div class="w-7 shrink-0 flex items-center justify-center">${createAvatarEl('Meta AI', 28).outerHTML}</div>
+        <div class="bubble-ai-analysis p-3.5 max-w-[85%] text-xs shadow-xs space-y-1 leading-relaxed">
+          <div class="flex items-center gap-1 font-bold text-sky-800 text-[11px] border-b border-sky-200/50 pb-1">
+            <span class="material-symbols-outlined text-[15px]">analytics</span>
+            分析結果
+          </div>
+          <div class="text-slate-800 whitespace-pre-wrap">${escapeHtml(answer)}</div>
+        </div>
+      `;
+      container.appendChild(analysisCard);
     }
 
     async function handleHistoryAiAnalysis(queryText) {
@@ -1575,6 +1611,10 @@ ${sampleLogs}
         chatMessageFlow.appendChild(analysisCard);
         unifiedScrollBox.scrollTop = unifiedScrollBox.scrollHeight;
 
+        const savedQa = (await dbGet("ai_history", `qa_${currentChatKey}`)) || [];
+        savedQa.push({ question: queryText, answer: replyText, timestamp: Date.now() });
+        await dbPut("ai_history", `qa_${currentChatKey}`, savedQa);
+
       } catch (err) {
         loadingBubble.remove();
         alert(err.message);
@@ -1587,7 +1627,7 @@ ${sampleLogs}
       await dbPut("ai_history", key, hist);
     }
 
-    async function triggerAiSimulationResponse(userText, isNudge = false) {
+    async function triggerAiSimulationResponse(userText, isNudge = false, nudgeTarget = null) {
       if (isAiWorking && abortController) {
         abortController.abort();
         hideAiTyping();
@@ -1599,14 +1639,12 @@ ${sampleLogs}
 
       try {
         if (isNudge) {
-          const rand = aiGroupMembers[Math.floor(Math.random() * aiGroupMembers.length)] || "朋友";
-          showAiTyping(rand);
+          showAiTyping(nudgeTarget || "朋友");
         }
 
         const plan = await callGeminiAPI(userText, signal);
 
         if (plan.no_reply || !plan.messages?.length) {
-          appendOfflineBadge();
           isAiWorking = false;
           return;
         }
@@ -1615,7 +1653,11 @@ ${sampleLogs}
           await sleep(Math.min(plan.read_delay_sec * 1000, 3000), signal);
         }
 
-        const clusters = groupContinuousMessages(plan.messages.map(m => ({
+        const responseMessages = isNudge 
+          ? plan.messages.filter(m => m.sender === nudgeTarget).slice(0, 1) 
+          : plan.messages;
+
+        const clusters = groupContinuousMessages(responseMessages.map(m => ({
           sender: m.sender,
           content: m.text,
           timestamp_ms: Date.now()
@@ -1639,14 +1681,6 @@ ${sampleLogs}
           isAiWorking = false;
         }
       }
-    }
-
-    function appendOfflineBadge() {
-      const notice = document.createElement('div');
-      notice.className = 'py-2 text-center text-[11px] text-slate-400 font-medium flex items-center justify-center gap-1.5 select-none';
-      notice.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span><span>成員已離線</span>`;
-      chatMessageFlow.appendChild(notice);
-      unifiedScrollBox.scrollTop = unifiedScrollBox.scrollHeight;
     }
 
     async function callGeminiAPI(userText, signal) {
@@ -1702,9 +1736,16 @@ ${sampleLogs}
       });
     }
 
+    // 打招呼 (限制單一成員發言)
     document.getElementById('btnAiNudgeAction').addEventListener('click', () => {
       const timeCtx = getCurrentTimeContext();
-      triggerAiSimulationResponse(`[情境：使用者剛剛敲了你一下。現在是「${timeCtx}」，請扮演最適合的成員主動開話題。嚴禁敷衍，依平時日常習慣拋出新話題。]`, true);
+      const chosenMember = aiGroupMembers[Math.floor(Math.random() * aiGroupMembers.length)] || "朋友";
+      
+      triggerAiSimulationResponse(
+        `[系統指令：使用者剛剛向群組敲了一下/打招呼。現在是「${timeCtx}」。【重要限制】：本對話為群組，但此情境下【必須且僅由成員「${chosenMember}」一人單獨發話開話題】，其他任何成員一律保持沉默，嚴禁多人群起回覆。請以「${chosenMember}」的口吻自然開啟話題。]`, 
+        true, 
+        chosenMember
+      );
     });
 
     function renderMessageCluster(group, container, appendMode = 'bottom') {
