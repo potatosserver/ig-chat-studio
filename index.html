@@ -98,7 +98,7 @@
 <body class="flex flex-col md:flex-row select-none bg-[#fafafa]">
 
   <!-- ============================================== -->
-  <!-- 導覽列 (M3 Navigation Rail) -->
+  <!-- 導覽列 -->
   <!-- ============================================== -->
   <nav id="navBar" class="order-2 md:order-1 bg-white border-t md:border-t-0 md:border-r border-[#e5e7eb] z-30 w-full md:w-20 md:h-full shrink-0 flex items-center shadow-xs">
     <div class="flex flex-row md:flex-col justify-around md:justify-evenly items-center w-full h-full py-1 md:py-6 px-1">
@@ -165,7 +165,6 @@
         <h1 class="text-3xl font-serif italic font-extrabold tracking-wide text-slate-900">𝑰𝑮 𝑪𝒉𝒂𝒕 𝑺𝒕𝒖𝒅𝒊𝒐</h1>
       </div>
 
-      <!-- 篩選卡片 -->
       <div class="bg-white p-4 rounded-3xl border border-[#e5e7eb] shadow-xs space-y-3">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div class="flex items-center gap-1.5 text-slate-800">
@@ -192,7 +191,6 @@
         </div>
       </div>
 
-      <!-- 統計數據指標 -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div class="bg-white p-4 rounded-3xl border border-[#e5e7eb] shadow-xs">
           <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">訊息總量</span>
@@ -244,7 +242,7 @@
       <!-- 對話視窗 -->
       <div id="chatRoomCol" class="h-full flex-1 flex flex-col bg-white overflow-hidden relative z-20">
         
-        <!-- 頂部資訊列 (固定順序：圖表檢視、清除按鈕、下載/打招呼、模式切換) -->
+        <!-- 頂部資訊列 (固定順序：圖表 -> 清除 -> 下載/打招呼 -> 模式切換) -->
         <div class="px-3.5 py-2.5 border-b border-[#e5e7eb] flex items-center justify-between bg-white shrink-0 z-20 gap-2">
           
           <!-- 左側：返回鍵 + 單一頭像 + 名稱 + 人數 -->
@@ -261,14 +259,14 @@
             </div>
           </div>
 
-          <!-- 右側功能區：固定順序【圖表檢視】->【清除按鈕】->【下載/打招呼】->【模式切換鍵(最右)】 -->
+          <!-- 右側固定工具按鈕群 -->
           <div class="flex items-center gap-1 shrink-0">
             <!-- 1. 圖表檢視按鈕 -->
             <button id="btnOpenRoomStats" title="數據分析" class="w-9 h-9 text-slate-600 hover:text-[#3797f0] rounded-xl hover:bg-slate-100 flex items-center justify-center transition">
               <span class="material-symbols-outlined text-[20px]">analytics</span>
             </button>
 
-            <!-- 2. 清除按鈕 (歷史模式: 清除問答 / AI模式: 清除模擬記憶) -->
+            <!-- 2. 清除按鈕 -->
             <button id="btnHistoryClearAi" title="清除 AI 問答紀錄" class="w-9 h-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition">
               <span class="material-symbols-outlined text-[20px]">delete_sweep</span>
             </button>
@@ -344,7 +342,6 @@
       </div>
 
       <div class="p-5 overflow-y-auto smooth-scroll space-y-5 flex-1">
-        
         <div class="grid grid-cols-2 gap-3.5">
           <div class="bg-slate-50 border border-slate-200/70 p-4 rounded-2xl">
             <div class="flex items-center gap-1.5 text-sky-700 font-bold text-xs">
@@ -402,13 +399,12 @@
             <canvas id="roomTimeChart"></canvas>
           </div>
         </div>
-
       </div>
     </div>
   </div>
 
   <!-- ============================================== -->
-  <!-- 教學彈窗 (完整保留 6 步驟與圖片容器) -->
+  <!-- 教學彈窗 (6 步驟與圖片完整保留) -->
   <!-- ============================================== -->
   <div id="tutorialModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white rounded-3xl max-w-xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl border border-slate-100">
@@ -431,7 +427,6 @@
           </a>
         </div>
 
-        <!-- 6 步驟詳細教學與圖片 -->
         <div class="space-y-4">
           <div class="space-y-1.5 border-b border-slate-100 pb-3">
             <h4 class="font-bold text-slate-900">1. 點擊「建立匯出檔案」</h4>
@@ -517,7 +512,7 @@
 
   <script>
     // ==========================================
-    // 狀態管理
+    // 狀態管理與並發佇列
     // ==========================================
     let allMessages = [];
     let chatMap = {};
@@ -532,10 +527,12 @@
     const CHUNK_SIZE = 80;
 
     let aiGroupMembers = [];
-    let isAiWorking = false;
-    let abortController = null;
-    let activeTypingBubble = null;
     let systemPromptBase = '';
+
+    // 並發與房間隔離
+    const MAX_CONCURRENT_AI = 3;
+    const activeAiTasks = new Map(); // chatKey -> { abortController, typingTarget }
+    const aiTaskQueue = [];
 
     let globalMinTimestamp = 0;
     let globalMaxTimestamp = 0;
@@ -605,6 +602,32 @@
         }
         directChatCache[title] = (humanSenders.size <= 2);
       }
+    }
+
+    // ==========================================
+    // 智慧預測最合理的打字頭貼 (徹底消滅 "成" 頭貼 BUG)
+    // ==========================================
+    function getProbableTypingTarget(chatKey, userText) {
+      const pool = chatMap[chatKey] || [];
+      const members = Array.from(new Set(pool.map(m => m.sender).filter(s => s && s.trim() !== '' && s !== myIdentity && s !== 'Meta AI')));
+
+      if (userText && /[@＠]Meta\s*AI/i.test(userText)) return 'Meta AI';
+
+      if (userText) {
+        for (const m of members) {
+          if (userText.includes(`@${m}`) || userText.includes(`＠${m}`)) return m;
+        }
+      }
+
+      // 如果是 1 對 1 私訊，絕對是該好友本人
+      if (members.length === 1) return members[0];
+      if (members.length > 1) {
+        // 群組中，選上一位剛說話的好友，若無則選第一位成員
+        const lastSpeaker = [...pool].reverse().find(m => m.sender && m.sender !== myIdentity && m.sender !== 'Meta AI');
+        return lastSpeaker ? lastSpeaker.sender : members[0];
+      }
+
+      return chatKey;
     }
 
     // ==========================================
@@ -865,9 +888,6 @@
     rangeEnd.addEventListener('input', onRangeInput);
     chkOnlyDM.addEventListener('change', updateHomeCharts);
 
-    // ==========================================
-    // 首頁圖表渲染
-    // ==========================================
     function updateHomeCharts() {
       if (!allMessages.length) return;
 
@@ -999,6 +1019,7 @@
 
           const item = document.createElement('div');
           item.className = 'px-4 py-3 flex items-center gap-3 hover:bg-slate-50 cursor-pointer transition';
+          item.id = `chatItem_${encodeURIComponent(title)}`;
           item.innerHTML = `
             ${createAvatarEl(title, 42).outerHTML}
             <div class="flex-1 min-w-0">
@@ -1009,7 +1030,7 @@
                 </div>
                 <span class="text-[10px] text-slate-400 shrink-0">${lastMsg ? formatDate(lastMsg.date).split(' ')[0] : ''}</span>
               </div>
-              <p class="text-[11px] text-slate-400 truncate">${lastMsg ? escapeHtml(lastMsg.content) : ''}</p>
+              <p class="text-[11px] text-slate-400 truncate item-last-msg">${lastMsg ? escapeHtml(lastMsg.content) : ''}</p>
             </div>
           `;
           item.addEventListener('click', () => openChatRoom(title));
@@ -1020,7 +1041,6 @@
 
     chatSearchInput.addEventListener('input', (e) => initUnifiedChatList(e.target.value.trim()));
 
-    // 開啟對話視窗 (單一質感頭像 + 群組名稱 + 人數)
     async function openChatRoom(chatTitle) {
       currentChatKey = chatTitle;
 
@@ -1050,17 +1070,18 @@
 你現在同時扮演此 Instagram 對話「${chatTitle}」裡的全員群組成員（除使用者「${myIdentity || '我'}」外），並兼任「Meta AI」助理。
 【群組全員完整名單（共 ${aiGroupMembers.length} 位成員，不可遺漏任何一人）】：
 ${memberProfiles}
-【重要發言準則】：
-1. 本對話為一個真實社群群聊，包含以上全部 ${aiGroupMembers.length} 位成員。請根據話題氛圍讓不同成員輪流發言或即時搭腔，不得只固定少數人發言，不可遺漏群組成員。
-2. 只有當使用者在訊息中直接提到 "@Meta AI" 或 "＠Meta AI" 時，Meta AI 才可介入發言；其他一般話題下，Meta AI 必須保持沉默。
-3. 若使用者提及特定成員（例如 @某人），該成員必須首要回應。
-4. 嚴格輸出合法 JSON：
+【重要核心準則 - 連續性與語意連貫】：
+1. 嚴格遵守語意連貫性！你必須嚴密針對使用者「剛剛說的最後一句話」進行真實且合理的回應。
+2. 嚴禁前言不對後語！嚴格禁止無厘頭突然跳痛切換話題，更嚴禁在沒有上下文提及的情況下突然猜測年齡、成績或數字（例如：若使用者只說「你猜啊」，你應順著調侃「猜錯有獎品嗎？」或反問，絕不可莫名其妙給出「大概20出頭吧？反正一定有過低標」這種缺乏前因後果的胡言亂語）。
+3. 只有當使用者在訊息中直接提到 "@Meta AI" 或 "＠Meta AI" 時，Meta AI 才可介入發言；其他一般話題下，Meta AI 必須保持沉默。
+4. 若使用者提及特定成員（例如 @某人），該成員必須首要回應。
+5. 嚴格輸出合法 JSON：
 {
   "read_delay_sec": 0.8,
   "no_reply": false,
   "messages": [{ "sender": "成員姓名或Meta AI", "text": "訊息內容", "typing_sec": 1.2 }]
 }
-【歷史對話記憶背景】：
+【歷史常態參考】：
 ${transcript}
       `.trim();
 
@@ -1070,7 +1091,6 @@ ${transcript}
     modeBtnHistory.addEventListener('click', () => switchMode('history'));
     modeBtnAi.addEventListener('click', () => switchMode('ai'));
 
-    // 切換模式：固定按鈕位置與顯示狀態
     async function switchMode(mode, forceRefresh = false) {
       currentMode = mode;
       const msgs = chatMap[currentChatKey] || [];
@@ -1079,7 +1099,6 @@ ${transcript}
         modeBtnHistory.className = 'px-3 py-1 rounded-xl bg-white text-slate-900 shadow-xs flex items-center gap-1 transition';
         modeBtnAi.className = 'px-3 py-1 rounded-xl text-slate-500 hover:text-slate-800 flex items-center gap-1 transition';
 
-        // 歷史模式：顯示下載按鈕、清除問答按鈕；隱藏 AI 專用按鈕
         btnExportJson.classList.remove('hidden');
         btnHistoryClearAi.classList.remove('hidden');
         btnAiClearMem.classList.add('hidden');
@@ -1104,7 +1123,6 @@ ${transcript}
         modeBtnAi.className = 'px-3 py-1 rounded-xl bg-white text-slate-900 shadow-xs flex items-center gap-1 transition';
         modeBtnHistory.className = 'px-3 py-1 rounded-xl text-slate-500 hover:text-slate-800 flex items-center gap-1 transition';
 
-        // AI 模式：顯示打招呼、清除模擬記憶；隱藏歷史專用按鈕
         btnExportJson.classList.add('hidden');
         btnHistoryClearAi.classList.add('hidden');
         btnAiClearMem.classList.remove('hidden');
@@ -1118,6 +1136,11 @@ ${transcript}
         const savedHistory = (await dbGet("ai_history", currentChatKey)) || [];
         const clusters = groupContinuousMessages(savedHistory);
         clusters.forEach(c => renderMessageCluster(c, chatMessageFlow, 'bottom'));
+
+        // 如果這個房間正在背景運算，顯示對應成員的打字中指示器
+        if (activeAiTasks.has(currentChatKey)) {
+          showAiTyping(currentChatKey, activeAiTasks.get(currentChatKey).typingTarget);
+        }
       }
 
       setTimeout(() => unifiedScrollBox.scrollTop = unifiedScrollBox.scrollHeight, 40);
@@ -1431,6 +1454,10 @@ ${transcript}
     btnAiClearMem.addEventListener('click', async () => {
       if (!currentChatKey) return;
       if (confirm(`確定清除與「${currentChatKey}」的 AI 模擬紀錄？`)) {
+        if (activeAiTasks.has(currentChatKey)) {
+          activeAiTasks.get(currentChatKey).abortController.abort();
+          activeAiTasks.delete(currentChatKey);
+        }
         await dbPut("ai_history", currentChatKey, []);
         chatMessageFlow.innerHTML = '';
       }
@@ -1504,7 +1531,7 @@ ${transcript}
         unifiedScrollBox.scrollTop = unifiedScrollBox.scrollHeight;
 
         await saveAiHistory(currentChatKey, userMsgObj);
-        triggerAiSimulationResponse(text, false);
+        enqueueAiTask(currentChatKey, text, false, null);
       }
     }
 
@@ -1627,76 +1654,155 @@ ${sampleLogs}
       await dbPut("ai_history", key, hist);
     }
 
-    async function triggerAiSimulationResponse(userText, isNudge = false, nudgeTarget = null) {
-      if (isAiWorking && abortController) {
-        abortController.abort();
-        hideAiTyping();
+    // =========================================================================
+    // 任務佇列與逐句真實打字流 (支援分段輸入中指示器 + 正確頭貼)
+    // =========================================================================
+    function enqueueAiTask(chatKey, userText, isNudge, nudgeTarget) {
+      aiTaskQueue.push({ chatKey, userText, isNudge, nudgeTarget });
+      processNextAiTask();
+    }
+
+    function processNextAiTask() {
+      if (activeAiTasks.size >= MAX_CONCURRENT_AI || aiTaskQueue.length === 0) return;
+
+      const task = aiTaskQueue.shift();
+      const abortController = new AbortController();
+
+      // 智慧預測最合理的發言者（絕對不會出現 "成員" / "成"）
+      const initialTypingTarget = task.nudgeTarget || getProbableTypingTarget(task.chatKey, task.userText);
+      activeAiTasks.set(task.chatKey, { abortController, typingTarget: initialTypingTarget });
+
+      // 如果使用者當前正在此聊天室，顯示打字中指示器
+      if (currentChatKey === task.chatKey && currentMode === 'ai') {
+        showAiTyping(task.chatKey, initialTypingTarget);
       }
 
-      isAiWorking = true;
-      abortController = new AbortController();
-      const signal = abortController.signal;
-
-      try {
-        if (isNudge) {
-          showAiTyping(nudgeTarget || "朋友");
+      runAiTask(task, abortController.signal).finally(() => {
+        activeAiTasks.delete(task.chatKey);
+        if (currentChatKey === task.chatKey) {
+          hideAiTyping(task.chatKey);
         }
+        processNextAiTask();
+      });
+    }
 
-        const plan = await callGeminiAPI(userText, signal);
+    async function runAiTask(task, signal) {
+      try {
+        const plan = await callGeminiAPI(task.chatKey, task.userText, signal, task.isNudge, task.nudgeTarget);
 
         if (plan.no_reply || !plan.messages?.length) {
-          isAiWorking = false;
+          if (currentChatKey === task.chatKey) hideAiTyping(task.chatKey);
           return;
         }
 
-        if (!isNudge && plan.read_delay_sec > 0) {
-          await sleep(Math.min(plan.read_delay_sec * 1000, 3000), signal);
-        }
-
-        const responseMessages = isNudge 
-          ? plan.messages.filter(m => m.sender === nudgeTarget).slice(0, 1) 
+        const responseMessages = task.isNudge && task.nudgeTarget
+          ? plan.messages.filter(m => m.sender === task.nudgeTarget).slice(0, 1)
           : plan.messages;
 
-        const clusters = groupContinuousMessages(responseMessages.map(m => ({
-          sender: m.sender,
-          content: m.text,
-          timestamp_ms: Date.now()
-        })));
+        // 【核心逐句打字流】：每句話發送前都顯示該成員的輸入指示器
+        for (let i = 0; i < responseMessages.length; i++) {
+          const msg = responseMessages[i];
+          const sender = msg.sender;
 
-        for (const cluster of clusters) {
-          showAiTyping(cluster[0].sender);
-          await sleep(isNudge ? 700 : 1300, signal);
-          hideAiTyping();
+          // 更新當前實際發言成員的指示器
+          if (activeAiTasks.has(task.chatKey)) {
+            activeAiTasks.get(task.chatKey).typingTarget = sender;
+          }
 
-          renderMessageCluster(cluster, chatMessageFlow, 'bottom');
-          unifiedScrollBox.scrollTop = unifiedScrollBox.scrollHeight;
+          // 1. 顯示該成員的輸入中跳動氣泡 (...)
+          if (currentChatKey === task.chatKey && currentMode === 'ai') {
+            showAiTyping(task.chatKey, sender);
+          }
 
-          for (const m of cluster) await saveAiHistory(currentChatKey, m);
+          // 2. 擬真打字時延 (根據句子長度計算自然秒數)
+          const typingDelay = Math.min(Math.max((msg.text.length * 45), 700), 2200);
+          await sleep(typingDelay, signal);
+
+          // 3. 隱藏打字指示器並渲染該句話
+          if (currentChatKey === task.chatKey) {
+            hideAiTyping(task.chatKey);
+          }
+
+          const msgObj = {
+            sender: msg.sender,
+            content: msg.text,
+            timestamp_ms: Date.now()
+          };
+
+          // 存入 DB
+          await saveAiHistory(task.chatKey, msgObj);
+          updateChatListPreview(task.chatKey, msg.text);
+
+          // 房間隔離渲染
+          if (currentChatKey === task.chatKey && currentMode === 'ai') {
+            renderMessageCluster([msgObj], chatMessageFlow, 'bottom');
+            unifiedScrollBox.scrollTop = unifiedScrollBox.scrollHeight;
+          }
+
+          // 若後面還有句子，稍作停頓再開始下一句的打字指示器
+          if (i < responseMessages.length - 1) {
+            await sleep(350, signal);
+          }
         }
-
-        isAiWorking = false;
       } catch (e) {
         if (e.name !== "AbortError") {
-          hideAiTyping();
-          isAiWorking = false;
+          console.error("AI 任務執行失敗：", e);
+        }
+      } finally {
+        if (currentChatKey === task.chatKey) {
+          hideAiTyping(task.chatKey);
         }
       }
     }
 
-    async function callGeminiAPI(userText, signal) {
+    function updateChatListPreview(chatKey, lastText) {
+      const item = document.getElementById(`chatItem_${encodeURIComponent(chatKey)}`);
+      if (item) {
+        const preview = item.querySelector('.item-last-msg');
+        if (preview) preview.innerText = lastText;
+      }
+    }
+
+    // 呼叫 Gemini：注入最近即時對話，確保連貫性
+    async function callGeminiAPI(chatKey, userText, signal, isNudge = false, nudgeTarget = null) {
       const key = localStorage.getItem('GEMINI_API_KEY');
       if (!key) throw new Error("請先至設定填寫 Gemini API Key");
 
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${FIXED_MODEL}:generateContent?key=${key}`;
-      const dynamicSystemPrompt = `${systemPromptBase}\n\n【背景】：\n${getCurrentTimeContext()}`;
+
+      const recentHistory = (await dbGet("ai_history", chatKey)) || [];
+      const recentDialog = recentHistory.slice(-10).map(m => `[${m.sender}]: ${m.content}`).join('\n');
+
+      let dynamicPrompt = '';
+      if (isNudge) {
+        dynamicPrompt = `
+【剛剛發生的對話記憶】：
+${recentDialog || '（目前無最近通話）'}
+
+【當前情境指令】：
+使用者剛剛敲了敲群組打招呼。請嚴格由成員「${nudgeTarget}」一人出面開話題，其他所有人保持沉默。
+請嚴格依據真實時間（${getCurrentTimeContext()}）自然拋出話題，切勿胡言亂語或前言不對後語！
+        `.trim();
+      } else {
+        dynamicPrompt = `
+【剛才發生的最近對話紀錄（請嚴格承接話題，保持邏輯連貫）】：
+${recentDialog || '（這是新對話的第一句）'}
+
+【使用者當前最新發言】：
+[${myIdentity || '我'}]: ${userText}
+
+【嚴格指令】：
+請針對使用者這句發言進行合理、自然的回覆。切勿前言不對後語，切勿突然胡亂跳到完全不相干的事物上！
+        `.trim();
+      }
 
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          system_instruction: { parts: [{ text: dynamicSystemPrompt }] },
-          contents: [{ role: "user", parts: [{ text: userText }] }],
-          generationConfig: { temperature: 0.95, response_mime_type: "application/json" }
+          system_instruction: { parts: [{ text: `${systemPromptBase}\n\n【環境真實時間】：\n${getCurrentTimeContext()}` }] },
+          contents: [{ role: "user", parts: [{ text: dynamicPrompt }] }],
+          generationConfig: { temperature: 0.9, response_mime_type: "application/json" }
         }),
         signal
       });
@@ -1706,46 +1812,43 @@ ${sampleLogs}
       return JSON.parse(json.candidates[0].content.parts[0].text);
     }
 
-    function showAiTyping(name) {
-      if (activeTypingBubble) return;
+    // 顯示打字指示器 (以指定真實發言者渲染)
+    function showAiTyping(chatKey, name) {
+      if (currentChatKey !== chatKey) return;
+      hideAiTyping(chatKey);
+
+      const targetName = name || getProbableTypingTarget(chatKey, null);
+
       const row = document.createElement('div');
+      row.id = `typingBubble_${encodeURIComponent(chatKey)}`;
       row.className = 'flex gap-2 items-end w-full mb-1';
       row.innerHTML = `
-        <div class="w-7 shrink-0 flex items-end justify-center">${createAvatarEl(name, 28).outerHTML}</div>
+        <div class="w-7 shrink-0 flex items-end justify-center">${createAvatarEl(targetName, 28).outerHTML}</div>
         <div class="bg-[#f2f3f5] px-3.5 py-2.5 rounded-[18px] flex items-center gap-1">
           <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
         </div>
       `;
       chatMessageFlow.appendChild(row);
       unifiedScrollBox.scrollTop = unifiedScrollBox.scrollHeight;
-      activeTypingBubble = row;
     }
 
-    function hideAiTyping() {
-      if (activeTypingBubble) {
-        activeTypingBubble.remove();
-        activeTypingBubble = null;
-      }
+    function hideAiTyping(chatKey) {
+      const bubble = document.getElementById(`typingBubble_${encodeURIComponent(chatKey)}`);
+      if (bubble) bubble.remove();
     }
 
     function sleep(ms, signal) {
       return new Promise((res, rej) => {
-        if (signal.aborted) return rej(new DOMException("Aborted", "AbortError"));
+        if (signal?.aborted) return rej(new DOMException("Aborted", "AbortError"));
         const t = setTimeout(res, ms);
-        signal.addEventListener("abort", () => { clearTimeout(t); rej(new DOMException("Aborted", "AbortError")); });
+        signal?.addEventListener("abort", () => { clearTimeout(t); rej(new DOMException("Aborted", "AbortError")); });
       });
     }
 
-    // 打招呼 (限制單一成員發言)
+    // 打招呼 (隨機選一位好友發起任務)
     document.getElementById('btnAiNudgeAction').addEventListener('click', () => {
-      const timeCtx = getCurrentTimeContext();
       const chosenMember = aiGroupMembers[Math.floor(Math.random() * aiGroupMembers.length)] || "朋友";
-      
-      triggerAiSimulationResponse(
-        `[系統指令：使用者剛剛向群組敲了一下/打招呼。現在是「${timeCtx}」。【重要限制】：本對話為群組，但此情境下【必須且僅由成員「${chosenMember}」一人單獨發話開話題】，其他任何成員一律保持沉默，嚴禁多人群起回覆。請以「${chosenMember}」的口吻自然開啟話題。]`, 
-        true, 
-        chosenMember
-      );
+      enqueueAiTask(currentChatKey, "[打招呼]", true, chosenMember);
     });
 
     function renderMessageCluster(group, container, appendMode = 'bottom') {
