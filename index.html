@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>IG Chat Studio</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+
+  <style>
+    :root {
+      --ig-bubble-other: #efefef;
+      --ig-bubble-me: #3797f0;
+      --ig-bubble-meta: linear-gradient(135deg, #0064e0 0%, #0095f6 50%, #833ab4 100%);
+      --ig-text-other: #000000;
+      --ig-text-me: #ffffff;
+      --ig-border: #dbdbdb;
+    }
+    * { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, 'Noto Sans TC'; 
+      box-sizing: border-box; 
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      background-color: #fafafa;
+    }
+
+    .smooth-scroll {
+      -webkit-overflow-scrolling: touch;
+      overflow-y: auto;
+      overscroll-behavior-y: contain;
+    }
+    .smooth-scroll::-webkit-scrollbar { width: 4px; }
+    .smooth-scroll::-webkit-scrollbar-track { background: transparent; }
+    .smooth-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 999px; }
+
+    .bubble-other { background-color: var(--ig-bubble-other); color: var(--ig-text-other); border-radius: 18px; }
+    .bubble-me { background-color: var(--ig-bubble-me); color: var(--ig-text-me); border-radius: 18px; }
+    .bubble-meta { background: var(--ig-bubble-meta); color: #ffffff; border-radius: 18px; }
+    .bubble-ai-analysis { background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%); border: 1px solid #bae6fd; color: #0f172a; border-radius: 18px; }
+
+    .group-first.bubble-other { border-bottom-left-radius: 4px; }
+    .group-middle.bubble-other { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
+    .group-last.bubble-other { border-top-left-radius: 4px; border-bottom-left-radius: 18px; }
+
+    .group-first.bubble-me { border-bottom-right-radius: 4px; }
+    .group-middle.bubble-me { border-top-right-radius: 4px; border-bottom-right-radius: 4px; }
+    .group-last.bubble-me { border-top-right-radius: 4px; border-bottom-right-radius: 18px; }
+
+    .typing-dot { width: 5px; height: 5px; border-radius: 50%; background: #8e8e8e; animation: pulse 1.2s infinite ease-in-out; }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
+
+    /* ========================================================= */
+    /* 核心修復：強制保障窄螢幕與電腦版的絕對貼底彈性佈局 */
+    /* ========================================================= */
+    @media (max-width: 767px) {
+      .mobile-view-list #chatListCol { display: flex !important; width: 100% !important; }
+      .mobile-view-list #chatRoomCol { display: none !important; }
+
+      .mobile-view-room #chatListCol { display: none !important; }
+      .mobile-view-room #chatRoomCol { 
+        display: flex !important; 
+        width: 100% !important; 
+        height: 100% !important;
+        position: absolute !important;
+        inset: 0 !important;
+      }
+    }
+    @media (min-width: 768px) {
+      #chatListCol { display: flex !important; width: 20rem !important; }
+      #chatRoomCol { display: flex !important; flex: 1 1 0% !important; position: relative !important; }
+    }
+  </style>
+</head>
+<body class="flex flex-col md:flex-row select-none">
+
+  <!-- ============================================== -->
+  <!-- 導覽列 (5 個分頁按鈕) -->
+  <!-- ============================================== -->
+  <nav id="navBar" class="order-2 md:order-1 bg-white border-t md:border-t-0 md:border-r border-[#dbdbdb] z-30 w-full md:w-20 md:h-full shrink-0 flex items-center">
+    <div class="flex flex-row md:flex-col justify-around md:justify-evenly items-center w-full h-full py-1.5 md:py-6 px-1">
+      
+      <!-- 1. 首頁 -->
+      <button data-tab="home" class="nav-item active flex flex-col items-center justify-center p-2 rounded-xl text-slate-800 hover:bg-slate-100 transition">
+        <span class="material-symbols-outlined text-[24px] md:text-[26px]">home</span>
+        <span class="text-[10px] font-medium hidden md:block mt-0.5">首頁</span>
+      </button>
+
+      <!-- 2. 訊息 -->
+      <button data-tab="messages" class="nav-item flex flex-col items-center justify-center p-2 rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition">
+        <span class="material-symbols-outlined text-[24px] md:text-[26px]">forum</span>
+        <span class="text-[10px] font-medium hidden md:block mt-0.5">訊息</span>
+      </button>
+
+      <!-- 3. 資料夾 -->
+      <button id="btnReupload" title="重選資料夾" class="p-2 rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition flex flex-col items-center">
+        <span class="material-symbols-outlined text-[24px] md:text-[26px]">folder_open</span>
+        <span class="text-[10px] font-medium hidden md:block mt-0.5">資料夾</span>
+      </button>
+
+      <!-- 4. 幫助 -->
+      <button id="btnHelp" title="匯出教學" class="p-2 rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition flex flex-col items-center">
+        <span class="material-symbols-outlined text-[24px] md:text-[26px]">help_outline</span>
+        <span class="text-[10px] font-medium hidden md:block mt-0.5">幫助</span>
+      </button>
+
+      <!-- 5. 設定 -->
+      <button id="btnSettings" title="設定" class="p-2 rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition flex flex-col items-center">
+        <span class="material-symbols-outlined text-[24px] md:text-[26px]">settings</span>
+        <span class="text-[10px] font-medium hidden md:block mt-0.5">設定</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ============================================== -->
+  <!-- 主工作區 -->
+  <!-- ============================================== -->
+  <main id="mainContainer" class="order-1 md:order-2 flex-1 w-full h-full relative overflow-hidden bg-[#fafafa]">
+
+    <!-- 上傳提示遮罩 -->
+    <div id="uploadOverlay" class="absolute inset-0 bg-[#fafafa] z-40 flex items-center justify-center p-4">
+      <div class="bg-white border border-[#dbdbdb] rounded-3xl p-8 max-w-lg w-full text-center space-y-5 shadow-sm" id="dropZone">
+        <input type="file" id="folderInput" webkitdirectory directory multiple class="hidden">
+        <div class="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center mx-auto text-slate-700">
+          <span class="material-symbols-outlined text-[32px]">folder_zip</span>
+        </div>
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">載入 Instagram 對話資料</h2>
+          <p class="text-xs text-slate-400 mt-1">選取 <code>messages &gt; inbox</code> 資料夾開始體驗</p>
+        </div>
+        <button onclick="document.getElementById('folderInput').click()" class="w-full bg-[#3797f0] hover:bg-[#1877f2] text-white py-2.5 rounded-xl text-xs font-bold transition">
+          選取 inbox 資料夾
+        </button>
+        <div id="loaderBox" class="hidden space-y-2 pt-2">
+          <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+            <div id="loaderBar" class="bg-[#3797f0] h-full w-0 transition-all duration-150"></div>
+          </div>
+          <p id="loaderText" class="text-[11px] text-slate-400 font-mono">正在讀取...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------- -->
+    <!-- 1. 首頁 -->
+    <!-- -------------------------------------------- -->
+    <section id="tabContentHome" class="absolute inset-0 overflow-y-auto smooth-scroll p-4 md:p-8 space-y-6">
+      <div class="text-center py-3 border-b border-[#dbdbdb]/40">
+        <h1 class="text-3xl font-serif italic font-extrabold tracking-wide text-slate-900">𝑰𝑮 𝑪𝒉𝒂𝒕 𝑺𝒕𝒖𝒅𝒊𝒐</h1>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="bg-white p-4 rounded-2xl border border-[#dbdbdb] shadow-sm">
+          <span class="text-[11px] font-bold text-slate-400 uppercase">訊息總量</span>
+          <p id="statTotalMessages" class="text-2xl font-black text-[#3797f0] mt-1">0</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-[#dbdbdb] shadow-sm">
+          <span class="text-[11px] font-bold text-slate-400 uppercase">聊天室數量</span>
+          <p id="statTotalChats" class="text-2xl font-black text-slate-800 mt-1">0</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-[#dbdbdb] shadow-sm">
+          <span class="text-[11px] font-bold text-slate-400 uppercase">最初紀錄時間</span>
+          <p id="statFirstDate" class="text-xs font-bold text-slate-600 mt-2 truncate">-</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-[#dbdbdb] shadow-sm">
+          <span class="text-[11px] font-bold text-slate-400 uppercase">最後紀錄時間</span>
+          <p id="statLastDate" class="text-xs font-bold text-slate-600 mt-2 truncate">-</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-6">
+        <div class="bg-white p-5 rounded-2xl border border-[#dbdbdb] shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider">好友訊息量排行 (Top 10)</h3>
+              <span id="homeMySelfCount" class="text-[11px] bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full font-bold hidden"></span>
+            </div>
+            <p class="text-[10px] text-slate-400 mb-2">已排除您本人的累計發言，精確呈現誰傳得最多</p>
+          </div>
+          <div class="relative h-72 w-full"><canvas id="senderChart"></canvas></div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-[#dbdbdb] shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">24 小時活躍聊天時段</h3>
+            <p class="text-[10px] text-slate-400 mb-2">統計所有成員最常傳訊息的一天中時段分佈</p>
+          </div>
+          <div class="relative h-72 w-full"><canvas id="hourlyChart"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------- -->
+    <!-- 2. 訊息整合區 (預設 mobile-view-list) -->
+    <!-- -------------------------------------------- -->
+    <section id="tabContentMessages" class="mobile-view-list hidden absolute inset-0 bg-white overflow-hidden flex flex-row">
+      
+      <!-- 聊天室列表欄 -->
+      <div id="chatListCol" class="h-full flex flex-col bg-white shrink-0 overflow-hidden border-r border-[#dbdbdb]">
+        <div class="p-3 border-b border-[#dbdbdb] shrink-0">
+          <input type="text" id="chatSearchInput" placeholder="搜尋好友或群組..." class="w-full bg-[#efefef] rounded-xl px-3 py-1.5 text-xs outline-none">
+        </div>
+        <div id="unifiedChatList" class="flex-1 overflow-y-auto smooth-scroll divide-y divide-slate-50 min-h-0"></div>
+      </div>
+
+      <!-- 對話視窗 (嚴格保障 flex-col 與 h-full，輸入框絕不跑位) -->
+      <div id="chatRoomCol" class="h-full flex-1 flex flex-col bg-white overflow-hidden relative z-20">
+        
+        <!-- 頂部資訊列 (shrink-0 固定高度) -->
+        <div class="px-3 py-2 border-b border-[#dbdbdb] flex items-center justify-between bg-white shrink-0 z-20 gap-2">
+          
+          <!-- 左側：返回鍵與對象資訊 (嚴格不出現 Meta AI 頭貼) -->
+          <div class="flex items-center gap-2 min-w-0">
+            <button id="btnBackChatList" class="md:hidden p-1 -ml-1 text-slate-700 hover:bg-slate-100 rounded-full shrink-0">
+              <span class="material-symbols-outlined text-[24px]">chevron_left</span>
+            </button>
+            <div id="headerAvatarGroup" class="flex -space-x-2 overflow-hidden items-center shrink-0"></div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5">
+                <h3 id="chatTitleHeader" class="text-sm font-bold text-slate-900 truncate max-w-[110px] sm:max-w-[180px]">選擇聊天室</h3>
+                <span id="chatOnlineBadge" class="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.2 rounded-full font-bold hidden shrink-0">全員在線</span>
+              </div>
+              <p id="chatSubHeader" class="text-[10px] text-slate-400 truncate">0 則紀錄</p>
+            </div>
+          </div>
+
+          <!-- 右側：模式切換器 & 快捷功能 -->
+          <div class="flex items-center gap-1 shrink-0">
+            <!-- 模式切換 Switch (歷史 / AI) -->
+            <div class="bg-slate-100 p-0.5 rounded-xl flex items-center text-[11px] font-bold">
+              <button id="modeBtnHistory" class="px-2.5 py-1 rounded-lg bg-white text-slate-900 shadow-sm transition">
+                📜 歷史
+              </button>
+              <button id="modeBtnAi" class="px-2.5 py-1 rounded-lg text-slate-500 hover:text-slate-800 transition">
+                🤖 AI 模擬
+              </button>
+            </div>
+
+            <!-- 歷史專用：匯出 JSON -->
+            <button id="btnExportJson" title="導出 JSON" class="p-1.5 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-100 flex items-center">
+              <span class="material-symbols-outlined text-[19px]">download</span>
+            </button>
+
+            <!-- AI 專用：清除記憶 -->
+            <button id="btnAiClearMem" title="清除 AI 記憶" class="hidden p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition">
+              <span class="material-symbols-outlined text-[19px]">delete_sweep</span>
+            </button>
+
+            <!-- AI 專用：打招呼 -->
+            <button id="btnAiNudgeAction" title="敲一下開話題" class="hidden px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold rounded-lg transition">
+              👋 敲一下
+            </button>
+          </div>
+        </div>
+
+        <!-- 訊息串流展示區 (flex-1 min-h-0 確保佔滿剩餘中間空間並獨立滑動) -->
+        <div id="unifiedScrollBox" class="flex-1 min-h-0 w-full overflow-y-auto smooth-scroll p-4 flex flex-col bg-white relative">
+          <!-- 向上載入更多動畫 (歷史模式專用) -->
+          <div id="historyTopSpinner" class="hidden py-2 text-center text-xs text-slate-400 shrink-0">
+            <span class="inline-block animate-spin mr-1">↻</span> 載入更早訊息中...
+          </div>
+          <!-- 訊息流掛載點 -->
+          <div id="chatMessageFlow" class="space-y-1 flex flex-col"></div>
+        </div>
+
+        <!-- Tag 浮層選單 (@提及成員，AI 模式用) -->
+        <div id="tagSuggestBox" class="hidden absolute bottom-16 left-4 right-4 bg-white rounded-2xl shadow-xl border border-slate-200 max-h-40 overflow-y-auto z-30 p-2 space-y-1 text-xs"></div>
+
+        <!-- 底部動態輸入列 (固定 shrink-0，無論何種模式永遠釘死在最底端) -->
+        <div id="unifiedInputBar" class="p-3 bg-white border-t border-[#dbdbdb] flex items-center gap-2 shrink-0 z-20 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div class="relative flex-1 flex items-center">
+            <textarea id="unifiedInput" rows="1" placeholder="輸入訊息..." class="w-full bg-slate-100 border-none rounded-2xl px-4 py-2.5 text-xs text-[#262626] outline-none resize-none max-h-24 focus:ring-1 focus:ring-slate-300"></textarea>
+          </div>
+          <button id="btnUnifiedSend" class="text-[#3797f0] font-bold text-xs px-3 py-2 disabled:opacity-30 transition flex items-center gap-1 shrink-0" disabled>
+            <span id="sendBtnIcon" class="material-symbols-outlined text-[18px]">psychology</span>
+            <span id="sendBtnText">問 AI</span>
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 教學彈窗 -->
+  <div id="tutorialModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="p-4 border-b border-[#dbdbdb] flex justify-between items-center">
+        <h3 class="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[#3797f0]">help_outline</span>
+          Instagram 對話紀錄匯出指引
+        </h3>
+        <button onclick="document.getElementById('tutorialModal').classList.add('hidden')" class="p-1 rounded-full text-slate-400 hover:bg-slate-100">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto smooth-scroll space-y-5 text-xs text-slate-700">
+        <div class="bg-blue-50 text-blue-700 p-3.5 rounded-2xl flex justify-between items-center font-medium">
+          <span>前往 Instagram 官方帳戶中心：</span>
+          <a href="https://accountscenter.instagram.com/info_and_permissions/dyi/" target="_blank" class="bg-[#3797f0] text-white px-3 py-1.5 rounded-xl font-bold hover:bg-[#1877f2] transition inline-flex items-center gap-1">
+            <span>前往</span>
+            <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+          </a>
+        </div>
+
+        <div class="space-y-4">
+          <div class="space-y-1.5 border-b border-slate-100 pb-3">
+            <h4 class="font-bold text-slate-900">1. 點擊「建立匯出檔案」</h4>
+            <div class="bg-slate-100 rounded-xl overflow-hidden aspect-video flex items-center justify-center text-slate-400">
+              <img src="img/img1.png" onerror="this.parentElement.innerHTML='<span class=\'p-4\'>[img/img1.png]</span>'" class="w-full h-full object-cover">
+            </div>
+          </div>
+          <div class="space-y-1.5 border-b border-slate-100 pb-3">
+            <h4 class="font-bold text-slate-900">2. 選擇對應的 IG 帳號</h4>
+            <div class="bg-slate-100 rounded-xl overflow-hidden aspect-video flex items-center justify-center text-slate-400">
+              <img src="img/img2.png" onerror="this.parentElement.innerHTML='<span class=\'p-4\'>[img/img2.png]</span>'" class="w-full h-full object-cover">
+            </div>
+          </div>
+          <div class="space-y-1.5 border-b border-slate-100 pb-3">
+            <h4 class="font-bold text-slate-900">3. 匯出目的地選擇「匯出到裝置」</h4>
+            <div class="bg-slate-100 rounded-xl overflow-hidden aspect-video flex items-center justify-center text-slate-400">
+              <img src="img/img3.png" onerror="this.parentElement.innerHTML='<span class=\'p-4\'>[img/img3.png]</span>'" class="w-full h-full object-cover">
+            </div>
+          </div>
+          <div class="space-y-1.5 border-b border-slate-100 pb-3">
+            <h4 class="font-bold text-slate-900">4. 自訂資訊只勾選「訊息」、格式務必選「JSON」</h4>
+            <div class="bg-slate-100 rounded-xl overflow-hidden aspect-video flex items-center justify-center text-slate-400">
+              <img src="img/img4.png" onerror="this.parentElement.innerHTML='<span class=\'p-4\'>[img/img4.png]</span>'" class="w-full h-full object-cover">
+            </div>
+          </div>
+          <div class="space-y-1.5 border-b border-slate-100 pb-3">
+            <h4 class="font-bold text-slate-900">5. 點擊「開始匯出」並輸入密碼驗證</h4>
+            <div class="bg-slate-100 rounded-xl overflow-hidden aspect-video flex items-center justify-center text-slate-400">
+              <img src="img/img5.png" onerror="this.parentElement.innerHTML='<span class=\'p-4\'>[img/img5.png]</span>'" class="w-full h-full object-cover">
+            </div>
+          </div>
+          <div class="space-y-1.5">
+            <h4 class="font-bold text-slate-900">6. 等待 Email 下載通知並解壓縮出 inbox 資料夾</h4>
+            <div class="bg-slate-100 rounded-xl overflow-hidden aspect-video flex items-center justify-center text-slate-400">
+              <img src="img/img6.png" onerror="this.parentElement.innerHTML='<span class=\'p-4\'>[img/img6.png]</span>'" class="w-full h-full object-cover">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-3.5 bg-slate-50 border-t border-[#dbdbdb] flex justify-end">
+        <button id="btnConfirmTutorial" class="bg-[#3797f0] text-white px-5 py-2 rounded-xl text-xs font-bold hover:bg-[#1877f2] transition">
+          我知道了
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 設定彈窗 -->
+  <div id="settingsModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-[#dbdbdb] pb-3">
+        <h3 class="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-slate-700">settings</span>
+          系統設定
+        </h3>
+        <button onclick="document.getElementById('settingsModal').classList.add('hidden')" class="p-1 rounded-full text-slate-400 hover:bg-slate-100">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Gemini API Key</label>
+          <input type="password" id="cfgApiKey" placeholder="貼上 API Key" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-[#3797f0]">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">固定 AI 模型</label>
+          <input type="text" value="gemini-3.5-flash-lite" disabled class="w-full bg-slate-100 text-slate-400 rounded-xl px-3 py-2 text-xs font-mono">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">本人身分校正</label>
+          <div class="flex gap-2">
+            <input type="text" id="cfgMyIdentity" class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none">
+            <button id="btnSaveIdentity" class="bg-slate-800 text-white px-3 py-1.5 rounded-xl font-bold">更新</button>
+          </div>
+        </div>
+        <div class="pt-2 border-t border-slate-100 flex justify-between items-center">
+          <span class="text-slate-500">清除 IndexedDB 資料庫快取</span>
+          <button id="btnClearCache" class="text-rose-600 font-bold hover:underline">清除快取</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // 狀態與 IndexedDB
+    // ==========================================
+    let allMessages = [];
+    let chatMap = {};
+    let myIdentity = '';
+    let chartInstances = {};
+    const FIXED_MODEL = 'gemini-3.5-flash-lite';
+
+    let currentChatKey = '';
+    let currentMode = 'history'; // 'history' 或 'ai'
+    let historyRenderStartIndex = 0;
+    const CHUNK_SIZE = 80;
+
+    let aiGroupMembers = [];
+    let isAiWorking = false;
+    let abortController = null;
+    let activeTypingBubble = null;
+    let systemPromptBase = '';
+
+    const DB_NAME = "IG_Chat_Studio_DB_V2";
+    const DB_VERSION = 1;
+
+    function openDB() {
+      return new Promise((res, rej) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains("archive")) db.createObjectStore("archive");
+          if (!db.objectStoreNames.contains("ai_history")) db.createObjectStore("ai_history");
+        };
+        req.onsuccess = (e) => res(e.target.result);
+        req.onerror = (e) => rej(e);
+      });
+    }
+
+    async function dbPut(store, key, val) {
+      const db = await openDB();
+      return new Promise((res, rej) => {
+        const tx = db.transaction(store, "readwrite");
+        tx.objectStore(store).put(val, key);
+        tx.oncomplete = () => res();
+        tx.onerror = (e) => rej(e);
+      });
+    }
+
+    async function dbGet(store, key) {
+      const db = await openDB();
+      return new Promise((res, rej) => {
+        const tx = db.transaction(store, "readonly");
+        const req = tx.objectStore(store).get(key);
+        req.onsuccess = () => res(req.result);
+        req.onerror = (e) => rej(e);
+      });
+    }
+
+    function getCurrentTimeContext() {
+      const now = new Date();
+      const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+      const hour = now.getHours();
+      let period = '上午';
+      if (hour >= 0 && hour < 6) period = '深夜凌晨';
+      else if (hour >= 6 && hour < 11) period = '早上';
+      else if (hour >= 11 && hour < 13) period = '中午';
+      else if (hour >= 13 && hour < 18) period = '下午';
+      else if (hour >= 18 && hour < 23) period = '晚上';
+      else period = '深夜';
+
+      return `現實真實時間：${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${days[now.getDay()]} ${period} ${String(hour).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    }
+
+    // ==========================================
+    // 生命週期
+    // ==========================================
+    window.addEventListener('DOMContentLoaded', async () => {
+      if (!localStorage.getItem('IG_STUDIO_TUTORIAL_SEEN')) {
+        document.getElementById('tutorialModal').classList.remove('hidden');
+      }
+      if (localStorage.getItem('GEMINI_API_KEY')) {
+        document.getElementById('cfgApiKey').value = localStorage.getItem('GEMINI_API_KEY');
+      }
+
+      try {
+        const cached = await dbGet("archive", "data");
+        if (cached && cached.allMessages && cached.allMessages.length > 0) {
+          allMessages = cached.allMessages;
+          chatMap = cached.chatMap;
+          myIdentity = cached.myIdentity || '';
+          allMessages.forEach(m => m.date = new Date(m.timestamp_ms));
+          for (let k in chatMap) chatMap[k].forEach(m => m.date = new Date(m.timestamp_ms));
+          activateStudio();
+        }
+      } catch (err) {
+        console.log("快取載入：", err);
+      }
+    });
+
+    function activateStudio() {
+      document.getElementById('uploadOverlay').classList.add('hidden');
+      initHomeCharts();
+      initUnifiedChatList();
+    }
+
+    // ==========================================
+    // 導覽切換 (5 個按鈕)
+    // ==========================================
+    const navBar = document.getElementById('navBar');
+    function hideNavBarOnMobile() { if (window.innerWidth < 768) navBar.classList.add('hidden'); }
+    function showNavBarOnMobile() { navBar.classList.remove('hidden'); }
+
+    document.querySelectorAll('.nav-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(b => {
+          b.classList.remove('active', 'text-slate-800');
+          b.classList.add('text-slate-400');
+        });
+        btn.classList.add('active', 'text-slate-800');
+        btn.classList.remove('text-slate-400');
+
+        const tab = btn.dataset.tab;
+        document.getElementById('tabContentHome').classList.toggle('hidden', tab !== 'home');
+        document.getElementById('tabContentMessages').classList.toggle('hidden', tab !== 'messages');
+        showNavBarOnMobile();
+      });
+    });
+
+    document.getElementById('btnHelp').addEventListener('click', () => document.getElementById('tutorialModal').classList.remove('hidden'));
+    document.getElementById('btnConfirmTutorial').addEventListener('click', () => {
+      localStorage.setItem('IG_STUDIO_TUTORIAL_SEEN', 'true');
+      document.getElementById('tutorialModal').classList.add('hidden');
+    });
+    document.getElementById('btnSettings').addEventListener('click', () => {
+      document.getElementById('cfgMyIdentity').value = myIdentity;
+      document.getElementById('settingsModal').classList.remove('hidden');
+    });
+    document.getElementById('cfgApiKey').addEventListener('change', (e) => localStorage.setItem('GEMINI_API_KEY', e.target.value.trim()));
+    document.getElementById('btnSaveIdentity').addEventListener('click', async () => {
+      const val = document.getElementById('cfgMyIdentity').value.trim();
+      if (val) {
+        myIdentity = val;
+        alert(`已校正本人身分為：${myIdentity}`);
+        await dbPut("archive", "data", { allMessages, chatMap, myIdentity });
+        initHomeCharts();
+      }
+    });
+    document.getElementById('btnClearCache').addEventListener('click', async () => {
+      if (confirm('確定清除快取資料庫並重新載入？')) {
+        indexedDB.deleteDatabase(DB_NAME);
+        localStorage.clear();
+        location.reload();
+      }
+    });
+    document.getElementById('btnReupload').addEventListener('click', () => document.getElementById('folderInput').click());
+
+    // ==========================================
+    // 檔案解析與前處理
+    // ==========================================
+    function fixEncoding(str) {
+      if (!str) return '';
+      try {
+        const bytes = new Uint8Array([...str].map(c => c.charCodeAt(0)));
+        return new TextDecoder('utf-8').decode(bytes);
+      } catch {
+        try { return decodeURIComponent(escape(str)); } catch { return str; }
+      }
+    }
+
+    function formatDate(d) {
+      if (!d || isNaN(d.getTime())) return '-';
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+
+    const AVATAR_COLORS = ['#e1306c', '#405de6', '#5851db', '#fd1d1d', '#f56040', '#f77737', '#10b981', '#6366f1', '#06b6d4', '#8b5cf6'];
+    function getAvatarColor(name) {
+      if (name === 'Meta AI') return 'linear-gradient(135deg, #0064e0 0%, #0095f6 50%, #833ab4 100%)';
+      let hash = 0;
+      for (let i = 0; i < (name || '').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+    }
+
+    function createAvatarEl(name, size = 28) {
+      const el = document.createElement('div');
+      el.className = 'rounded-full shrink-0 flex items-center justify-center text-white font-bold text-[11px] shadow-sm border border-white';
+      const bg = getAvatarColor(name);
+      if (bg.includes('gradient')) el.style.background = bg;
+      else el.style.backgroundColor = bg;
+      el.style.width = `${size}px`;
+      el.style.height = `${size}px`;
+      el.innerText = (name === 'Meta AI') ? 'AI' : (name || '?').trim().charAt(0).toUpperCase();
+      return el;
+    }
+
+    const folderInput = document.getElementById('folderInput');
+    folderInput.addEventListener('change', (e) => {
+      const files = Array.from(e.target.files).filter(f => /message_\d+\.json$/i.test(f.name));
+      if (files.length) processFiles(files);
+    });
+
+    async function processFiles(files) {
+      const loaderBox = document.getElementById('loaderBox');
+      const loaderBar = document.getElementById('loaderBar');
+      const loaderText = document.getElementById('loaderText');
+      loaderBox.classList.remove('hidden');
+
+      allMessages = [];
+      chatMap = {};
+      const deduplicateSet = new Set();
+      const senderFreq = {};
+      const now = Date.now();
+
+      let processed = 0;
+      const total = files.length;
+      const BATCH = 4;
+
+      for (let i = 0; i < total; i += BATCH) {
+        const chunk = files.slice(i, i + BATCH);
+        await Promise.all(chunk.map(async file => {
+          try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+            const chatTitle = fixEncoding(data.title || '未知聊天室');
+            if (!chatMap[chatTitle]) chatMap[chatTitle] = [];
+
+            if (Array.isArray(data.messages)) {
+              for (const msg of data.messages) {
+                let ts = Number(msg.timestamp_ms || msg.timestamp);
+                if (!ts || isNaN(ts)) continue;
+                if (ts > 1e14) ts = Math.floor(ts / 1000);
+                if (ts < 1e11) ts = ts * 1000;
+                if (ts > now + 7 * 86400000) continue;
+
+                const sender = fixEncoding(msg.sender_name || '未知');
+                let content = '';
+                if (msg.content) content = fixEncoding(msg.content);
+                else if (msg.photos?.length) content = '[照片]';
+                else if (msg.videos?.length) content = '[影片]';
+                else if (msg.audio_files?.length) content = '[語音]';
+                else if (msg.share) content = '[分享]';
+                else if (msg.sticker) content = '[貼圖]';
+                else content = '[媒體/互動]';
+
+                const hash = `${chatTitle}_${ts}_${sender}_${content.slice(0, 20)}`;
+                if (deduplicateSet.has(hash)) continue;
+                deduplicateSet.add(hash);
+
+                const item = { chat: chatTitle, timestamp_ms: ts, date: new Date(ts), sender, content };
+                allMessages.push(item);
+                chatMap[chatTitle].push(item);
+                senderFreq[sender] = (senderFreq[sender] || 0) + 1;
+              }
+            }
+          } catch (e) { console.error(e); }
+        }));
+
+        processed = Math.min(i + BATCH, total);
+        const pct = Math.round((processed / total) * 100);
+        loaderBar.style.width = pct + '%';
+        loaderText.innerText = `讀取中: ${processed}/${total} (${pct}%) - 累積 ${allMessages.length.toLocaleString()} 則`;
+        await new Promise(r => setTimeout(r, 0));
+      }
+
+      const topSender = Object.entries(senderFreq).sort((a,b) => b[1] - a[1])[0];
+      myIdentity = topSender ? topSender[0] : '';
+
+      allMessages.sort((a, b) => a.timestamp_ms - b.timestamp_ms);
+      Object.keys(chatMap).forEach(k => chatMap[k].sort((a, b) => a.timestamp_ms - b.timestamp_ms));
+
+      await dbPut("archive", "data", {
+        allMessages: allMessages.map(m => ({ chat: m.chat, timestamp_ms: m.timestamp_ms, sender: m.sender, content: m.content })),
+        chatMap: Object.fromEntries(Object.entries(chatMap).map(([k, v]) => [k, v.map(m => ({ chat: m.chat, timestamp_ms: m.timestamp_ms, sender: m.sender, content: m.content }))])),
+        myIdentity
+      });
+
+      activateStudio();
+    }
+
+    // ==========================================
+    // 首頁統計圖表
+    // ==========================================
+    function initHomeCharts() {
+      document.getElementById('statTotalMessages').innerText = allMessages.length.toLocaleString();
+      document.getElementById('statTotalChats').innerText = Object.keys(chatMap).length.toLocaleString();
+      document.getElementById('statFirstDate').innerText = allMessages.length ? formatDate(allMessages[0].date) : '-';
+      document.getElementById('statLastDate').innerText = allMessages.length ? formatDate(allMessages[allMessages.length - 1].date) : '-';
+
+      const senders = {}, hours = Array(24).fill(0);
+      let myTotalCount = 0;
+
+      allMessages.forEach(m => {
+        senders[m.sender] = (senders[m.sender] || 0) + 1;
+        hours[m.date.getHours()]++;
+        if (m.sender === myIdentity) myTotalCount++;
+      });
+
+      const myBadge = document.getElementById('homeMySelfCount');
+      if (myIdentity && myTotalCount > 0) {
+        myBadge.classList.remove('hidden');
+        myBadge.innerText = `本人 (${myIdentity})：${myTotalCount.toLocaleString()} 則`;
+      }
+
+      const friendsOnly = Object.entries(senders)
+        .filter(([name]) => name !== myIdentity)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+
+      const ctxSender = document.getElementById('senderChart').getContext('2d');
+      if (chartInstances.sender) chartInstances.sender.destroy();
+
+      chartInstances.sender = new Chart(ctxSender, {
+        type: 'bar',
+        data: {
+          labels: friendsOnly.map(x => x[0]),
+          datasets: [{
+            data: friendsOnly.map(x => x[1]),
+            backgroundColor: '#3797f0',
+            borderRadius: 6,
+            barPercentage: 0.6,
+            categoryPercentage: 0.8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (ctx) => ` 傳送了 ${ctx.raw.toLocaleString()} 則` } }
+          },
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { font: { size: 10 } } },
+            x: {
+              grid: { display: false },
+              ticks: { autoSkip: false, maxRotation: 35, minRotation: 35, font: { size: 11, weight: '600' }, color: '#475569' }
+            }
+          }
+        }
+      });
+
+      const ctxHourly = document.getElementById('hourlyChart').getContext('2d');
+      if (chartInstances.hourly) chartInstances.hourly.destroy();
+      chartInstances.hourly = new Chart(ctxHourly, {
+        type: 'bar',
+        data: {
+          labels: Array.from({length: 24}, (_, i) => `${i}點`),
+          datasets: [{ data: hours, backgroundColor: '#c7d2fe', hoverBackgroundColor: '#6366f1', borderRadius: 4 }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+          }
+        }
+      });
+    }
+
+    // ==========================================
+    // 訊息面板邏輯 (修復手機與窄螢幕佈局切換)
+    // ==========================================
+    const tabContentMessages = document.getElementById('tabContentMessages');
+    const unifiedChatList = document.getElementById('unifiedChatList');
+    const chatSearchInput = document.getElementById('chatSearchInput');
+    const unifiedScrollBox = document.getElementById('unifiedScrollBox');
+    const chatMessageFlow = document.getElementById('chatMessageFlow');
+    const unifiedInput = document.getElementById('unifiedInput');
+    const btnUnifiedSend = document.getElementById('btnUnifiedSend');
+    const sendBtnIcon = document.getElementById('sendBtnIcon');
+    const sendBtnText = document.getElementById('sendBtnText');
+    const tagSuggestBox = document.getElementById('tagSuggestBox');
+
+    const modeBtnHistory = document.getElementById('modeBtnHistory');
+    const modeBtnAi = document.getElementById('modeBtnAi');
+    const btnExportJson = document.getElementById('btnExportJson');
+    const btnAiClearMem = document.getElementById('btnAiClearMem');
+    const btnAiNudgeAction = document.getElementById('btnAiNudgeAction');
+
+    function initUnifiedChatList(query = '') {
+      unifiedChatList.innerHTML = '';
+      const sortedKeys = Object.keys(chatMap).sort((a,b) => chatMap[b].length - chatMap[a].length);
+
+      sortedKeys.forEach(title => {
+        if (!query || title.toLowerCase().includes(query.toLowerCase())) {
+          const msgs = chatMap[title];
+          const lastMsg = msgs[msgs.length - 1];
+
+          const item = document.createElement('div');
+          item.className = 'px-4 py-3 flex items-center gap-3 hover:bg-slate-50 cursor-pointer transition';
+          item.innerHTML = `
+            ${createAvatarEl(title, 42).outerHTML}
+            <div class="flex-1 min-w-0">
+              <div class="flex justify-between items-baseline mb-0.5">
+                <h4 class="font-bold text-xs text-slate-900 truncate">${escapeHtml(title)}</h4>
+                <span class="text-[10px] text-slate-400 shrink-0">${lastMsg ? formatDate(lastMsg.date).split(' ')[0] : ''}</span>
+              </div>
+              <p class="text-[11px] text-slate-400 truncate">${lastMsg ? escapeHtml(lastMsg.content) : ''}</p>
+            </div>
+          `;
+          item.addEventListener('click', () => openChatRoom(title));
+          unifiedChatList.appendChild(item);
+        }
+      });
+    }
+
+    chatSearchInput.addEventListener('input', (e) => initUnifiedChatList(e.target.value.trim()));
+
+    // 開啟聊天室 (切換至手機對話畫面 mobile-view-room)
+    async function openChatRoom(chatTitle) {
+      currentChatKey = chatTitle;
+
+      tabContentMessages.classList.remove('mobile-view-list');
+      tabContentMessages.classList.add('mobile-view-room');
+      hideNavBarOnMobile();
+
+      const pool = chatMap[chatTitle] || [];
+      const participantSet = new Set(pool.map(m => m.sender).filter(s => s && s !== myIdentity && s !== 'Meta AI'));
+      aiGroupMembers = Array.from(participantSet);
+
+      document.getElementById('chatTitleHeader').innerText = chatTitle;
+
+      // 渲染頂部頭貼 (徹底移除 Meta AI，純好友)
+      const avatarBox = document.getElementById('headerAvatarGroup');
+      avatarBox.innerHTML = '';
+      if (aiGroupMembers.length > 0) {
+        aiGroupMembers.slice(0, 3).forEach(p => avatarBox.appendChild(createAvatarEl(p, 26)));
+      } else {
+        avatarBox.appendChild(createAvatarEl(chatTitle, 26));
+      }
+
+      // 構建 AI 角色提示背景
+      const freq = {};
+      pool.forEach(m => freq[m.sender] = (freq[m.sender] || 0) + 1);
+      const memberProfiles = aiGroupMembers.map(name => `- 成員「${name}」：在歷史中發言 ${freq[name] || 0} 次。`).join('\n');
+      const transcript = pool.slice(-600).map(m => `[${m.sender}]: ${m.content}`).join('\n');
+
+      systemPromptBase = `
+你現在同時扮演此 Instagram 對話「${chatTitle}」裡的所有群組成員（除使用者「${myIdentity || '我'}」外），並兼任「Meta AI」助理。
+【群組成員名單（嚴格禁止在未被提及時讓 Meta AI 發言）】：
+${memberProfiles}
+【重要行為準則】：
+1. 嚴格遵守：只有當使用者明確輸入 "@Meta AI" 或 "＠Meta AI" 時，Meta AI 才可以出面以友善博學口吻回答；否則 Meta AI 絕對不能主動講話。
+2. 若提及特定成員（例如 @小明），該成員必須優先並符合語氣出面。
+3. 嚴格輸出合法 JSON：
+{
+  "read_delay_sec": 0.8,
+  "no_reply": false,
+  "messages": [{ "sender": "成員姓名或Meta AI", "text": "訊息內容", "typing_sec": 1.2 }]
+}
+【歷史對話記憶背景】：
+${transcript}
+      `.trim();
+
+      switchMode(currentMode, true);
+    }
+
+    // 模式切換按鈕
+    modeBtnHistory.addEventListener('click', () => switchMode('history'));
+    modeBtnAi.addEventListener('click', () => switchMode('ai'));
+
+    async function switchMode(mode, forceRefresh = false) {
+      currentMode = mode;
+      const msgs = chatMap[currentChatKey] || [];
+
+      if (mode === 'history') {
+        modeBtnHistory.className = 'px-2.5 py-1 rounded-lg bg-white text-slate-900 shadow-sm transition';
+        modeBtnAi.className = 'px-2.5 py-1 rounded-lg text-slate-500 hover:text-slate-800 transition';
+
+        btnExportJson.classList.remove('hidden');
+        btnAiClearMem.classList.add('hidden');
+        btnAiNudgeAction.classList.add('hidden');
+        document.getElementById('chatOnlineBadge').classList.add('hidden');
+
+        document.getElementById('chatSubHeader').innerText = `${msgs.length.toLocaleString()} 則歷史紀錄`;
+        
+        unifiedInput.placeholder = "💡 向 AI 詢問此對話的歷史紀錄、統計或細節...";
+        sendBtnIcon.innerText = "psychology";
+        sendBtnText.innerText = "問 AI";
+
+        chatMessageFlow.innerHTML = '';
+        historyRenderStartIndex = Math.max(0, msgs.length - CHUNK_SIZE);
+        const initialBatch = msgs.slice(historyRenderStartIndex);
+        const clusters = groupContinuousMessages(initialBatch);
+        clusters.forEach(c => renderMessageCluster(c, chatMessageFlow, 'bottom'));
+
+      } else {
+        modeBtnAi.className = 'px-2.5 py-1 rounded-lg bg-white text-slate-900 shadow-sm transition';
+        modeBtnHistory.className = 'px-2.5 py-1 rounded-lg text-slate-500 hover:text-slate-800 transition';
+
+        btnExportJson.classList.add('hidden');
+        btnAiClearMem.classList.remove('hidden');
+        btnAiNudgeAction.classList.remove('hidden');
+        document.getElementById('chatOnlineBadge').classList.remove('hidden');
+
+        document.getElementById('chatSubHeader').innerText = `${aiGroupMembers.length} 位成員全員在線模擬中`;
+
+        unifiedInput.placeholder = "輸入訊息，或輸入 @ 提及特定成員、@Meta AI...";
+        sendBtnIcon.innerText = "send";
+        sendBtnText.innerText = "傳送";
+
+        chatMessageFlow.innerHTML = '';
+        const savedHistory = (await dbGet("ai_history", currentChatKey)) || [];
+        const clusters = groupContinuousMessages(savedHistory);
+        clusters.forEach(c => renderMessageCluster(c, chatMessageFlow, 'bottom'));
+      }
+
+      setTimeout(() => unifiedScrollBox.scrollTop = unifiedScrollBox.scrollHeight, 40);
+    }
+
+    // 手機返回列表
+    document.getElementById('btnBackChatList').addEventListener('click', () => {
+      tabContentMessages.classList.remove('mobile-view-room');
+      tabContentMessages.classList.add('mobile-view-list');
+      showNavBarOnMobile();
+    });
+
+    // 歷史向上滾動分頁
+    unifiedScrollBox.addEventListener('scroll', () => {
+      if (currentMode !== 'history') return;
+      if (unifiedScrollBox.scrollTop <= 20 && historyRenderStartIndex > 0) {
+        const spinner = document.getElementById('historyTopSpinner');
+        spinner.classList.remove('hidden');
+
+        const prevHeight = unifiedScrollBox.scrollHeight;
+        const newStartIndex = Math.max(0, historyRenderStartIndex - CHUNK_SIZE);
+        const msgs = chatMap[currentChatKey] || [];
+        const olderBatch = msgs.slice(newStartIndex, historyRenderStartIndex);
+        historyRenderStartIndex = newStartIndex;
+
+        const clusters = groupContinuousMessages(olderBatch);
+        for (let i = clusters.length - 1; i >= 0; i--) {
+          renderMessageCluster(clusters[i], chatMessageFlow, 'top');
+        }
+
+        unifiedScrollBox.scrollTop = unifiedScrollBox.scrollHeight - prevHeight;
+        spinner.classList.add('hidden');
+      }
+    });
+
+    // 匯出 JSON
+    btnExportJson.addEventListener('click', () => {
+      if (!currentChatKey) return;
+      const data = {
+        chat_name: currentChatKey,
+        messages: (chatMap[currentChatKey] || []).map(m => ({ sender: m.sender, datetime: formatDate(m.date), content: m.content }))
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `IG_${currentChatKey}_${Date.now()}.json`;
+      a.click();
+    });
+
+    // 清除 AI 記憶
+    btnAiClearMem.addEventListener('click', async () => {
+      if (confirm(`確定清除與「${currentChatKey}」的 AI 模擬對話紀錄？`)) {
+        await dbPut("ai_history", currentChatKey, []);
+        chatMessageFlow.innerHTML = '';
+      }
+    });
+
+    // ==========================================
+    // 輸入傳送邏輯
+    // ==========================================
+    unifiedInput.addEventListener('input', () => {
+      unifiedInput.style.height = 'auto';
+      unifiedInput.style.height = (unifiedInput.scrollHeight > 80 ? 80 : unifiedInput.scrollHeight) + 'px';
+      btnUnifiedSend.disabled = !unifiedInput.value.trim();
+
+      if (currentMode === 'ai') {
+        const text = unifiedInput.value;
+        const match = text.match(/[@＠]([^\s@＠]*)$/);
+        if (match) {
+          const query = match[1].toLowerCase();
+          const candidates = ['Meta AI', ...aiGroupMembers].filter(name => name.toLowerCase().includes(query));
+          renderTagSuggestions(candidates);
+        } else {
+          tagSuggestBox.classList.add('hidden');
+        }
+      } else {
+        tagSuggestBox.classList.add('hidden');
+      }
+    });
+
+    function renderTagSuggestions(candidates) {
+      if (!candidates.length) { tagSuggestBox.classList.add('hidden'); return; }
+      tagSuggestBox.innerHTML = '';
+      candidates.forEach(name => {
+        const item = document.createElement('div');
+        item.className = 'px-3 py-1.5 hover:bg-slate-100 rounded-xl cursor-pointer flex items-center gap-2';
+        item.innerHTML = `
+          ${createAvatarEl(name, 20).outerHTML}
+          <span class="font-bold text-slate-700">${name === 'Meta AI' ? '✦ Meta AI (AI 助手)' : escapeHtml(name)}</span>
+        `;
+        item.addEventListener('click', () => {
+          unifiedInput.value = unifiedInput.value.replace(/[@＠][^\s@＠]*$/, `@${name} `);
+          tagSuggestBox.classList.add('hidden');
+          unifiedInput.focus();
+        });
+        tagSuggestBox.appendChild(item);
+      });
+      tagSuggestBox.classList.remove('hidden');
+    }
+
+    unifiedInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (unifiedInput.value.trim()) handleUnifiedSend();
+      }
+    });
+    btnUnifiedSend.addEventListener('click', handleUnifiedSend);
+
+    async function handleUnifiedSend() {
+      const text = unifiedInput.value.trim();
+      if (!text) return;
+      tagSuggestBox.classList.add('hidden');
+
+      unifiedInput.value = '';
+      unifiedInput.style.height = 'auto';
+      btnUnifiedSend.disabled = true;
+
+      if (currentMode === 'history') {
+        await handleHistoryAiAnalysis(text);
+      } else {
+        const userMsgObj = { sender: myIdentity || '我', content: text, timestamp_ms: Date.now() };
+        renderMessageCluster([userMsgObj], chatMessageFlow, 'bottom');
+        unifiedScrollBox.scrollTop = unifiedScrollBox.scrollHeight;
+
+        await saveAiHistory(currentChatKey, userMsgObj);
+        triggerAiSimulationResponse(text, false);
+      }
+    }
+
+    // 歷史模式：AI 歷史問答
+    async function handleHistoryAiAnalysis(queryText) {
+      const msgs = chatMap[currentChatKey] || [];
+      if (!msgs.length) return;
+
+      const userQ = { sender: myIdentity || '我', content: `🔍 提問分析：${queryText}`, timestamp_ms: Date.now() };
+      renderMessageCluster([userQ], chatMessageFlow, 'bottom');
+      unifiedScrollBox.scrollTop = unifiedScrollBox.scrollHeight;
+
+      const loadingBubble = document.createElement('div');
+      loadingBubble.className = 'flex gap-2 items-start w-full mb-2';
+      loadingBubble.innerHTML = `
+        <div class="w-7 shrink-0 flex items-center justify-center">${createAvatarEl('Meta AI', 28).outerHTML}</div>
+        <div class="bubble-ai-analysis p-3.5 max-w-[85%] text-xs shadow-sm flex items-center gap-2">
+          <span class="inline-block animate-spin text-[#0284c7]">↻</span>
+          <span class="text-slate-600 font-medium">正在統整「${currentChatKey}」的發言紀錄與數據...</span>
+        </div>
+      `;
+      chatMessageFlow.appendChild(loadingBubble);
+      unifiedScrollBox.scrollTop = unifiedScrollBox.scrollHeight;
+
+      const senders = {};
+      const hourly = Array(24).fill(0);
+      msgs.forEach(m => {
+        senders[m.sender] = (senders[m.sender] || 0) + 1;
+        hourly[m.date.getHours()]++;
+      });
+      const topSendersStr = Object.entries(senders).sort((a,b)=>b[1]-a[1]).map(([name, c]) => `${name}: ${c}則`).join('、');
+      const peakHour = hourly.indexOf(Math.max(...hourly));
+
+      const sampleLogs = msgs.slice(-600).map(m => `[${formatDate(m.date)}] ${m.sender}: ${m.content}`).join('\n');
+
+      const analysisPrompt = `
+你是一位頂尖的 Instagram 歷史對話資料分析專家。使用者正在回顧與查詢他與「${currentChatKey}」的真實對話記錄。
+【聊天室統計數據概況】：
+- 聊天室名稱：${currentChatKey}
+- 訊息總量：${msgs.length} 則
+- 紀錄涵蓋時間：從 ${formatDate(msgs[0].date)} 至 ${formatDate(msgs[msgs.length - 1].date)}
+- 發言量排行：${topSendersStr}
+- 一天中最活躍時段：約為 ${peakHour} 點前後
+【歷史對話節錄樣本（最新或關鍵片段）】：
+${sampleLogs}
+
+【使用者提問】：
+「${queryText}」
+
+【請依照以下格式條理回答】：
+1. 針對使用者的問題給予客觀、精確且有趣的答覆。
+2. 若涉及統計，請引述上述真實數據。
+3. 若提及某人講過的話，列舉紀錄中的大略時間或字眼。
+4. 語氣專業、清晰、富有社群親切感，使用 Markdown 粗體或清單輔助呈現。
+      `.trim();
+
+      try {
+        const key = localStorage.getItem('GEMINI_API_KEY');
+        if (!key) throw new Error("請先至設定填寫 Gemini API Key");
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${FIXED_MODEL}:generateContent?key=${key}`;
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: analysisPrompt }] }],
+            generationConfig: { temperature: 0.7 }
+          })
+        });
+
+        if (!res.ok) throw new Error("AI 統計分析請求失敗");
+        const json = await res.json();
+        const replyText = json.candidates[0].content.parts[0].text;
+
+        loadingBubble.remove();
+
+        const analysisCard = document.createElement('div');
+        analysisCard.className = 'flex gap-2 items-start w-full mb-2';
+        analysisCard.innerHTML = `
+          <div class="w-7 shrink-0 flex items-center justify-center">${createAvatarEl('Meta AI', 28).outerHTML}</div>
+          <div class="bubble-ai-analysis p-3.5 max-w-[85%] text-xs shadow-sm space-y-1.5 leading-relaxed">
+            <div class="flex items-center gap-1 font-bold text-sky-800 text-[11px] border-b border-sky-200/60 pb-1">
+              <span class="material-symbols-outlined text-[15px]">analytics</span>
+              對話紀錄分析結果
+            </div>
+            <div class="text-slate-800 whitespace-pre-wrap">${escapeHtml(replyText)}</div>
+          </div>
+        `;
+        chatMessageFlow.appendChild(analysisCard);
+        unifiedScrollBox.scrollTop = unifiedScrollBox.scrollHeight;
+
+      } catch (err) {
+        loadingBubble.remove();
+        alert(err.message);
+      }
+    }
+
+    // AI 模式：即時角色扮演
+    async function saveAiHistory(key, msg) {
+      const hist = (await dbGet("ai_history", key)) || [];
+      hist.push(msg);
+      await dbPut("ai_history", key, hist);
+    }
+
+    async function triggerAiSimulationResponse(userText, isNudge = false) {
+      if (isAiWorking && abortController) {
+        abortController.abort();
+        hideAiTyping();
+      }
+
+      isAiWorking = true;
+      abortController = new AbortController();
+      const signal = abortController.signal;
+
+      try {
+        if (isNudge) {
+          const rand = aiGroupMembers[Math.floor(Math.random() * aiGroupMembers.length)] || "朋友";
+          showAiTyping(rand);
+        }
+
+        const plan = await callGeminiAPI(userText, signal);
+
+        if (plan.no_reply || !plan.messages?.length) {
+          appendOfflineBadge();
+          isAiWorking = false;
+          return;
+        }
+
+        if (!isNudge && plan.read_delay_sec > 0) {
+          await sleep(Math.min(plan.read_delay_sec * 1000, 3000), signal);
+        }
+
+        const clusters = groupContinuousMessages(plan.messages.map(m => ({
+          sender: m.sender,
+          content: m.text,
+          timestamp_ms: Date.now()
+        })));
+
+        for (const cluster of clusters) {
+          showAiTyping(cluster[0].sender);
+          await sleep(isNudge ? 700 : 1300, signal);
+          hideAiTyping();
+
+          renderMessageCluster(cluster, chatMessageFlow, 'bottom');
+          unifiedScrollBox.scrollTop = unifiedScrollBox.scrollHeight;
+
+          for (const m of cluster) await saveAiHistory(currentChatKey, m);
+        }
+
+        isAiWorking = false;
+      } catch (e) {
+        if (e.name !== "AbortError") {
+          hideAiTyping();
+          isAiWorking = false;
+        }
+      }
+    }
+
+    function appendOfflineBadge() {
+      const notice = document.createElement('div');
+      notice.className = 'py-2 text-center text-[11px] text-slate-400 font-medium flex items-center justify-center gap-1.5 select-none';
+      notice.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span><span>${aiGroupMembers.length > 1 ? '全員已下線' : '對方已下線'}</span>`;
+      chatMessageFlow.appendChild(notice);
+      unifiedScrollBox.scrollTop = unifiedScrollBox.scrollHeight;
+    }
+
+    async function callGeminiAPI(userText, signal) {
+      const key = localStorage.getItem('GEMINI_API_KEY');
+      if (!key) throw new Error("請先至設定填寫 Gemini API Key");
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${FIXED_MODEL}:generateContent?key=${key}`;
+      const dynamicSystemPrompt = `${systemPromptBase}\n\n【當前環境背景】：\n${getCurrentTimeContext()}`;
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: dynamicSystemPrompt }] },
+          contents: [{ role: "user", parts: [{ text: userText }] }],
+          generationConfig: { temperature: 0.95, response_mime_type: "application/json" }
+        }),
+        signal
+      });
+
+      if (!res.ok) throw new Error("Gemini 請求失敗");
+      const json = await res.json();
+      return JSON.parse(json.candidates[0].content.parts[0].text);
+    }
+
+    function showAiTyping(name) {
+      if (activeTypingBubble) return;
+      const row = document.createElement('div');
+      row.className = 'flex gap-2 items-end w-full mb-1';
+      row.innerHTML = `
+        <div class="w-7 shrink-0 flex items-end justify-center">${createAvatarEl(name, 28).outerHTML}</div>
+        <div class="bg-[#efefef] px-3.5 py-2.5 rounded-[18px] flex items-center gap-1">
+          <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+        </div>
+      `;
+      chatMessageFlow.appendChild(row);
+      unifiedScrollBox.scrollTop = unifiedScrollBox.scrollHeight;
+      activeTypingBubble = row;
+    }
+
+    function hideAiTyping() {
+      if (activeTypingBubble) {
+        activeTypingBubble.remove();
+        activeTypingBubble = null;
+      }
+    }
+
+    function sleep(ms, signal) {
+      return new Promise((res, rej) => {
+        if (signal.aborted) return rej(new DOMException("Aborted", "AbortError"));
+        const t = setTimeout(res, ms);
+        signal.addEventListener("abort", () => { clearTimeout(t); rej(new DOMException("Aborted", "AbortError")); });
+      });
+    }
+
+    btnAiNudgeAction.addEventListener('click', () => {
+      const timeCtx = getCurrentTimeContext();
+      triggerAiSimulationResponse(`[系統觸發情境：使用者剛剛敲了你一下。現在是「${timeCtx}」，請扮演最適合的成員主動找使用者閒聊開話題！
+【開話題限制】：
+1. 嚴禁只回覆「幹嘛」、「怎麼了」。
+2. 根據現在的真實時段或過去群組最常重複出現的日常共同嗜好（如打球、手搖、遊戲、下班），自然拋出一個新話題！]`, true);
+    });
+
+    // ==========================================
+    // 訊息氣泡渲染核心
+    // ==========================================
+    function renderMessageCluster(group, container, appendMode = 'bottom') {
+      if (!group.length) return;
+      const first = group[0];
+      const isMe = (first.sender === myIdentity || first.sender === '我');
+      const isMetaAI = (first.sender === 'Meta AI');
+
+      const wrapper = document.createElement('div');
+      wrapper.className = `flex gap-2 items-end w-full mb-1 ${isMe ? 'justify-end' : 'justify-start'}`;
+
+      const avatarBox = document.createElement('div');
+      avatarBox.className = 'w-7 shrink-0 flex items-end justify-center';
+      if (!isMe) avatarBox.appendChild(createAvatarEl(first.sender, 28));
+
+      const stack = document.createElement('div');
+      stack.className = `flex flex-col space-y-[2px] max-w-[75%] sm:max-w-[65%] ${isMe ? 'items-end' : 'items-start'}`;
+
+      if (!isMe) {
+        const nameLabel = document.createElement('span');
+        nameLabel.className = 'text-[10px] text-slate-400 font-bold ml-2 mb-0.5';
+        nameLabel.innerHTML = isMetaAI ? `<span class="text-indigo-600 font-black">✦ Meta AI</span>` : escapeHtml(first.sender);
+        stack.appendChild(nameLabel);
+      }
+
+      group.forEach((msg, idx) => {
+        let pos = '';
+        if (group.length === 1) pos = 'rounded-[18px]';
+        else if (idx === 0) pos = 'group-first';
+        else if (idx === (group.length - 1)) pos = 'group-last';
+        else pos = 'group-middle';
+
+        const bubble = document.createElement('div');
+        bubble.className = `px-3.5 py-2 text-xs md:text-[13px] leading-relaxed break-words whitespace-pre-wrap ${
+          isMe ? 'bubble-me' : (isMetaAI ? 'bubble-meta' : 'bubble-other')
+        } ${pos}`;
+        bubble.innerText = msg.content;
+        stack.appendChild(bubble);
+      });
+
+      if (isMe) wrapper.appendChild(stack);
+      else {
+        wrapper.appendChild(avatarBox);
+        wrapper.appendChild(stack);
+      }
+
+      if (appendMode === 'top') container.insertBefore(wrapper, container.firstChild);
+      else container.appendChild(wrapper);
+    }
+
+    function groupContinuousMessages(list) {
+      const clusters = [];
+      let current = [];
+      list.forEach(m => {
+        if (!current.length) current.push(m);
+        else if (current[0].sender === m.sender) current.push(m);
+        else {
+          clusters.push(current);
+          current = [m];
+        }
+      });
+      if (current.length) clusters.push(current);
+      return clusters;
+    }
+
+    function escapeHtml(t) {
+      if (!t) return '';
+      return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
