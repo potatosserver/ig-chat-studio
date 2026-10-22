@@ -66,14 +66,18 @@
     @keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
 
     /* M3 Range Slider */
-    .range-slider-container { position: relative; height: 28px; display: flex; align-items: center; }
+    .range-slider-container { position: relative; height: 28px; display: flex; align-items: center; user-select: none; }
     .range-slider-track { position: absolute; width: 100%; height: 6px; background: #e5e7eb; border-radius: 8px; }
-    .range-slider-highlight { position: absolute; height: 6px; background: #3797f0; border-radius: 8px; z-index: 1; }
+    .range-slider-highlight {
+      position: absolute; height: 8px; background: #3797f0; border-radius: 8px; z-index: 3; cursor: grab;
+      box-shadow: 0 1px 3px rgba(55, 151, 240, 0.4);
+    }
+    .range-slider-highlight:active { cursor: grabbing; background: #1877f2; }
     .range-slider-input {
-      position: absolute; width: 100%; pointer-events: none; appearance: none; -webkit-appearance: none; background: transparent; z-index: 2; margin: 0;
+      position: absolute; width: 100%; pointer-events: none; appearance: none; -webkit-appearance: none; background: transparent; z-index: 4; margin: 0;
     }
     .range-slider-input::-webkit-slider-thumb {
-      pointer-events: auto; appearance: none; -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #ffffff; border: 2.5px solid #3797f0; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+      pointer-events: auto; appearance: none; -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #ffffff; border: 2.5px solid #3797f0; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
     }
 
     /* Heatmap Grid */
@@ -166,25 +170,33 @@
       </div>
 
       <div class="bg-white p-4 rounded-3xl border border-[#e5e7eb] shadow-xs space-y-3">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 flex-wrap">
           <div class="flex items-center gap-1.5 text-slate-800">
             <span class="material-symbols-outlined text-[20px] text-[#3797f0]">tune</span>
             <span class="text-xs font-bold">過濾條件</span>
           </div>
-          <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200/70 hover:bg-slate-100 transition">
-            <input type="checkbox" id="chkOnlyDM" class="w-4 h-4 text-[#3797f0] rounded border-slate-300 focus:ring-0">
-            <span>僅顯示 1 對 1 私訊</span>
-          </label>
+          
+          <div class="flex items-center gap-2 flex-wrap">
+            <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200/70 hover:bg-slate-100 transition">
+              <input type="checkbox" id="chkOnlyDM" class="w-4 h-4 text-[#3797f0] rounded border-slate-300 focus:ring-0">
+              <span>僅顯示 1 對 1 私訊</span>
+            </label>
+
+            <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200/70 hover:bg-slate-100 transition">
+              <input type="checkbox" id="chkExcludeMedia" class="w-4 h-4 text-[#3797f0] rounded border-slate-300 focus:ring-0">
+              <span>排除影音與轉發貼文</span>
+            </label>
+          </div>
         </div>
 
         <div class="space-y-1.5 pt-1">
           <div class="flex justify-between items-center text-[11px] text-slate-500 font-medium">
-            <span>時間區間</span>
+            <span>時間區間 <span class="text-[10px] text-slate-400">(可拖曳藍色區塊平移時長)</span>：</span>
             <span id="rangeLabelText" class="font-bold text-[#3797f0] font-mono">-</span>
           </div>
-          <div class="range-slider-container">
+          <div class="range-slider-container" id="sliderContainer">
             <div class="range-slider-track"></div>
-            <div id="rangeHighlight" class="range-slider-highlight"></div>
+            <div id="rangeHighlight" class="range-slider-highlight" title="按住拖曳可整體平移時長"></div>
             <input type="range" id="rangeStart" class="range-slider-input" min="0" max="100" value="0">
             <input type="range" id="rangeEnd" class="range-slider-input" min="0" max="100" value="100">
           </div>
@@ -230,8 +242,6 @@
     <!-- 2. 訊息整合區 -->
     <!-- -------------------------------------------- -->
     <section id="tabContentMessages" class="mobile-view-list hidden absolute inset-0 bg-white overflow-hidden flex flex-row">
-      
-      <!-- 聊天室列表欄 -->
       <div id="chatListCol" class="h-full flex flex-col bg-white shrink-0 overflow-hidden border-r border-[#e5e7eb]">
         <div class="p-3 border-b border-[#e5e7eb] shrink-0">
           <input type="text" id="chatSearchInput" placeholder="搜尋好友或群組..." class="w-full bg-[#f2f3f5] rounded-2xl px-4 py-2 text-xs outline-none focus:ring-1 focus:ring-[#3797f0] transition">
@@ -239,42 +249,29 @@
         <div id="unifiedChatList" class="flex-1 overflow-y-auto smooth-scroll divide-y divide-slate-50 min-h-0"></div>
       </div>
 
-      <!-- 對話視窗 -->
       <div id="chatRoomCol" class="h-full flex-1 flex flex-col bg-white overflow-hidden relative z-20">
-        
-        <!-- 頂部資訊列 (固定順序：圖表 -> 清除 -> 下載/打招呼 -> 模式切換) -->
         <div class="px-3.5 py-2.5 border-b border-[#e5e7eb] flex items-center justify-between bg-white shrink-0 z-20 gap-2">
-          
-          <!-- 左側：返回鍵 + 單一頭像 + 名稱 + 人數 -->
           <div class="flex items-center gap-2.5 min-w-0">
             <button id="btnBackChatList" class="md:hidden p-1.5 -ml-1 text-slate-700 hover:bg-slate-100 rounded-full shrink-0 transition">
               <span class="material-symbols-outlined text-[24px]">arrow_back</span>
             </button>
-            
             <div id="headerSingleAvatar" class="shrink-0"></div>
-            
             <div class="min-w-0">
               <h3 id="chatTitleHeader" class="text-sm font-bold text-slate-900 truncate max-w-[120px] sm:max-w-[200px]">選擇聊天室</h3>
               <p id="chatSubHeader" class="text-[11px] text-slate-400 truncate">0 位成員</p>
             </div>
           </div>
 
-          <!-- 右側固定工具按鈕群 -->
           <div class="flex items-center gap-1 shrink-0">
-            <!-- 1. 圖表檢視按鈕 -->
             <button id="btnOpenRoomStats" title="數據分析" class="w-9 h-9 text-slate-600 hover:text-[#3797f0] rounded-xl hover:bg-slate-100 flex items-center justify-center transition">
               <span class="material-symbols-outlined text-[20px]">analytics</span>
             </button>
-
-            <!-- 2. 清除按鈕 -->
             <button id="btnHistoryClearAi" title="清除 AI 問答紀錄" class="w-9 h-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition">
               <span class="material-symbols-outlined text-[20px]">delete_sweep</span>
             </button>
             <button id="btnAiClearMem" title="清除 AI 對話紀錄" class="hidden w-9 h-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition">
               <span class="material-symbols-outlined text-[20px]">delete_sweep</span>
             </button>
-
-            <!-- 3. 下載按鈕 (歷史) / 打招呼 (AI) -->
             <button id="btnExportJson" title="導出 JSON" class="w-9 h-9 text-slate-500 hover:text-slate-800 rounded-xl hover:bg-slate-100 flex items-center justify-center transition">
               <span class="material-symbols-outlined text-[20px]">download</span>
             </button>
@@ -282,7 +279,6 @@
               <span class="material-symbols-outlined text-[20px]">waving_hand</span>
             </button>
 
-            <!-- 4. 模式切換 Segmented Button (固定於最右側) -->
             <div class="bg-slate-100 p-1 rounded-2xl flex items-center text-[11px] font-bold ml-1">
               <button id="modeBtnHistory" class="px-3 py-1 rounded-xl bg-white text-slate-900 shadow-xs flex items-center gap-1 transition">
                 <span class="material-symbols-outlined text-[15px]">history</span>
@@ -296,7 +292,6 @@
           </div>
         </div>
 
-        <!-- 訊息展示區 -->
         <div id="unifiedScrollBox" class="flex-1 min-h-0 w-full overflow-y-auto smooth-scroll p-4 flex flex-col bg-white relative">
           <div id="historyTopSpinner" class="hidden py-2 text-center text-xs text-slate-400 shrink-0">
             <span class="inline-block animate-spin mr-1">↻</span> 載入更早訊息中...
@@ -304,10 +299,8 @@
           <div id="chatMessageFlow" class="space-y-1.5 flex flex-col"></div>
         </div>
 
-        <!-- Tag 浮層選單 -->
         <div id="tagSuggestBox" class="hidden absolute bottom-16 left-4 right-4 bg-white rounded-3xl shadow-xl border border-slate-200 max-h-40 overflow-y-auto z-30 p-2 space-y-1 text-xs"></div>
 
-        <!-- 底部動態輸入列 (永久釘底) -->
         <div id="unifiedInputBar" class="p-3 bg-white border-t border-[#e5e7eb] flex items-center gap-2 shrink-0 z-20 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div class="relative flex-1 flex items-center">
             <textarea id="unifiedInput" rows="1" placeholder="輸入訊息..." class="w-full bg-[#f2f3f5] border-none rounded-2xl px-4 py-2.5 text-xs text-[#262626] outline-none resize-none max-h-24 focus:ring-1 focus:ring-slate-300"></textarea>
@@ -317,14 +310,12 @@
             <span id="sendBtnText">問 AI</span>
           </button>
         </div>
-
       </div>
     </section>
-
   </main>
 
   <!-- ============================================== -->
-  <!-- 彈窗：單一聊天室深度數據分析 -->
+  <!-- 彈窗：單一聊天室深度數據分析 (3大元素精準收斂) -->
   <!-- ============================================== -->
   <div id="roomStatsModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-slate-100">
@@ -342,6 +333,7 @@
       </div>
 
       <div class="p-5 overflow-y-auto smooth-scroll space-y-5 flex-1">
+        <!-- 破冰與話題收尾統計 -->
         <div class="grid grid-cols-2 gap-3.5">
           <div class="bg-slate-50 border border-slate-200/70 p-4 rounded-2xl">
             <div class="flex items-center gap-1.5 text-sky-700 font-bold text-xs">
@@ -362,6 +354,41 @@
           </div>
         </div>
 
+        <!-- 3 大元素總量概覽卡片 -->
+        <div class="bg-slate-50 border border-slate-200/70 p-4 rounded-2xl space-y-2.5">
+          <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[17px] text-[#3797f0]">perm_media</span>
+            分享與媒體內容統計 (3大類別)
+          </h4>
+          <div class="grid grid-cols-3 gap-2.5 text-center">
+            <div class="bg-white p-3 rounded-xl border border-slate-200/60 shadow-2xs">
+              <span class="text-[11px] font-bold text-purple-600 block flex items-center justify-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">movie</span>
+                短影音與貼文
+              </span>
+              <span id="roomTotalReelsPosts" class="text-lg font-black text-slate-800 mt-1 block">0</span>
+              <span class="text-[9px] text-slate-400">Reels / Threads / 轉發</span>
+            </div>
+            <div class="bg-white p-3 rounded-xl border border-slate-200/60 shadow-2xs">
+              <span class="text-[11px] font-bold text-emerald-600 block flex items-center justify-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">image</span>
+                影音媒體
+              </span>
+              <span id="roomTotalMedia" class="text-lg font-black text-slate-800 mt-1 block">0</span>
+              <span class="text-[9px] text-slate-400">圖片 / 影片 / GIF / 語音</span>
+            </div>
+            <div class="bg-white p-3 rounded-xl border border-slate-200/60 shadow-2xs">
+              <span class="text-[11px] font-bold text-amber-600 block flex items-center justify-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">link</span>
+                外部網址
+              </span>
+              <span id="roomTotalLinks" class="text-lg font-black text-slate-800 mt-1 block">0</span>
+              <span class="text-[9px] text-slate-400">各類網站 (排除GIF)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 圓餅圖：成員佔比 -->
         <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/70">
           <h4 class="text-xs font-bold text-slate-800 mb-2">發言量比例分佈</h4>
           <div class="relative h-60 w-full flex items-center justify-center">
@@ -369,6 +396,7 @@
           </div>
         </div>
 
+        <!-- 活躍熱度日曆 -->
         <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/70 space-y-2">
           <div class="flex justify-between items-center">
             <h4 class="text-xs font-bold text-slate-800">活躍熱度日曆</h4>
@@ -388,11 +416,13 @@
           </div>
         </div>
 
+        <!-- 各成員風格與影音分享明細 -->
         <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/70 space-y-3">
-          <h4 class="text-xs font-bold text-slate-800">各成員常用表情與口頭禪</h4>
+          <h4 class="text-xs font-bold text-slate-800">各成員發言風格與分享習慣</h4>
           <div id="roomPersonaContainer" class="space-y-3"></div>
         </div>
 
+        <!-- 24 小時傳送時段分佈 -->
         <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/70">
           <h4 class="text-xs font-bold text-slate-800 mb-2">24 小時傳送時段分佈</h4>
           <div class="relative h-56 w-full">
@@ -403,9 +433,7 @@
     </div>
   </div>
 
-  <!-- ============================================== -->
-  <!-- 教學彈窗 (6 步驟與圖片完整保留) -->
-  <!-- ============================================== -->
+  <!-- 教學彈窗 -->
   <div id="tutorialModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white rounded-3xl max-w-xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl border border-slate-100">
       <div class="p-4 border-b border-[#e5e7eb] flex justify-between items-center">
@@ -512,6 +540,51 @@
 
   <script>
     // ==========================================
+    // 3 大類元素精準識別器
+    // 1. reels_posts: 短影音與貼文 (轉發附件、IG Reels/Posts、Threads、YouTube Shorts、FB)
+    // 2. media: 影音媒體 (圖片、自傳影片、語音、貼圖、GIF)
+    // 3. links: 外部網址 (排除 GIF 的一般網頁連結)
+    // ==========================================
+    const RE_ATTACHMENT = /^.*傳送了\s*\d+\s*[個份]附件.*$/i;
+    const RE_ATTACHMENT_RAW = /.*\\u00e5\\u0082\\u00b3\\u00e9\\u0080\\u0081\\u00e4\\u00ba\\u0086\s*\d+\s*(\\u00e5\\u0080\\u008b|\\u00e4\\u00bb\\u00bd)\\u00e9\\u0099\\u0084\\u00e4\\u00bb\\u00b6.*/i;
+    const RE_IG_REEL_POST = /https?:\/\/(?:www\.)?instagram\.com\/(?:reel|p)\/[\w-]+/i;
+    const RE_THREADS = /https?:\/\/(?:www\.)?threads\.(?:com|net)\/@[\w.-]+\/post\/[\w-]+/i;
+    const RE_YT_SHORTS = /https?:\/\/(?:www\.)?(?:youtube\.com\/shorts\/|youtu\.be\/)[\w-]+/i;
+    const RE_FB_VIDEO = /https?:\/\/(?:www\.)?facebook\.com\/share\/[vr]\/[\w-]+/i;
+
+    const RE_GIPHY = /https?:\/\/media\d*\.giphy\.com\/media\/[\w/-]+/i;
+    const RE_ANY_URL = /https?:\/\/[^\s]+/i;
+
+    function getMediaCategory(content) {
+      if (!content) return null;
+
+      // 1. 短影音與貼文 (IG預設轉發文字「傳送了X個附件」、Reels、Threads、Post、[分享])
+      if (RE_ATTACHMENT.test(content) || RE_ATTACHMENT_RAW.test(content) ||
+          RE_IG_REEL_POST.test(content) || RE_THREADS.test(content) ||
+          RE_YT_SHORTS.test(content) || RE_FB_VIDEO.test(content) ||
+          content === '[分享]') {
+        return 'reels_posts';
+      }
+
+      // 2. 影音媒體 (圖片、影片、語音、貼圖、Giphy GIF)
+      if (RE_GIPHY.test(content) || ['[照片]', '[影片]', '[語音]', '[貼圖]', '[媒體/互動]'].includes(content)) {
+        return 'media';
+      }
+
+      // 3. 外部網址 (排除 Giphy 之後的其他一般超連結)
+      if (RE_ANY_URL.test(content)) {
+        return 'links';
+      }
+
+      return null;
+    }
+
+    function isMediaOrPostMessage(content) {
+      const cat = getMediaCategory(content);
+      return cat === 'reels_posts' || cat === 'media';
+    }
+
+    // ==========================================
     // 狀態管理與並發佇列
     // ==========================================
     let allMessages = [];
@@ -529,9 +602,8 @@
     let aiGroupMembers = [];
     let systemPromptBase = '';
 
-    // 並發與房間隔離
     const MAX_CONCURRENT_AI = 3;
-    const activeAiTasks = new Map(); // chatKey -> { abortController, typingTarget }
+    const activeAiTasks = new Map();
     const aiTaskQueue = [];
 
     let globalMinTimestamp = 0;
@@ -604,9 +676,6 @@
       }
     }
 
-    // ==========================================
-    // 智慧預測最合理的打字頭貼 (徹底消滅 "成" 頭貼 BUG)
-    // ==========================================
     function getProbableTypingTarget(chatKey, userText) {
       const pool = chatMap[chatKey] || [];
       const members = Array.from(new Set(pool.map(m => m.sender).filter(s => s && s.trim() !== '' && s !== myIdentity && s !== 'Meta AI')));
@@ -619,15 +688,40 @@
         }
       }
 
-      // 如果是 1 對 1 私訊，絕對是該好友本人
       if (members.length === 1) return members[0];
       if (members.length > 1) {
-        // 群組中，選上一位剛說話的好友，若無則選第一位成員
         const lastSpeaker = [...pool].reverse().find(m => m.sender && m.sender !== myIdentity && m.sender !== 'Meta AI');
         return lastSpeaker ? lastSpeaker.sender : members[0];
       }
-
       return chatKey;
+    }
+
+    const AVATAR_COLORS = [
+      '#0284c7', '#2563eb', '#4f46e5', '#7c3aed', '#9333ea', '#c026d3',
+      '#db2777', '#e11d48', '#ea580c', '#d97706', '#ca8a04', '#65a30d',
+      '#16a34a', '#059669', '#0d9488', '#0891b2', '#475569', '#64748b',
+      '#f43f5e', '#ec4899', '#8b5cf6', '#3b82f6', '#10b981', '#f59e0b'
+    ];
+
+    function getAvatarColor(name) {
+      if (name === 'Meta AI') return 'linear-gradient(135deg, #0064e0 0%, #0095f6 50%, #833ab4 100%)';
+      let hash = 0;
+      for (let i = 0; i < (name || '').length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+    }
+
+    function createAvatarEl(name, size = 30) {
+      const el = document.createElement('div');
+      el.className = 'rounded-full shrink-0 flex items-center justify-center text-white font-bold text-xs shadow-xs border-2 border-white';
+      const bg = getAvatarColor(name);
+      if (bg.includes('gradient')) el.style.background = bg;
+      else el.style.backgroundColor = bg;
+      el.style.width = `${size}px`;
+      el.style.height = `${size}px`;
+      el.innerText = (name === 'Meta AI') ? 'AI' : (name || '?').trim().charAt(0).toUpperCase();
+      return el;
     }
 
     // ==========================================
@@ -660,6 +754,7 @@
     function activateStudio() {
       document.getElementById('uploadOverlay').classList.add('hidden');
       setupTimeSliderBounds();
+      initSliderDrag();
       updateHomeCharts();
       initUnifiedChatList();
     }
@@ -726,26 +821,6 @@
       if (!d || isNaN(d.getTime())) return '-';
       const pad = n => String(n).padStart(2, '0');
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    }
-
-    const AVATAR_COLORS = ['#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#10b981', '#06b6d4', '#0284c7'];
-    function getAvatarColor(name) {
-      if (name === 'Meta AI') return 'linear-gradient(135deg, #0064e0 0%, #0095f6 50%, #833ab4 100%)';
-      let hash = 0;
-      for (let i = 0; i < (name || '').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-      return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-    }
-
-    function createAvatarEl(name, size = 30) {
-      const el = document.createElement('div');
-      el.className = 'rounded-full shrink-0 flex items-center justify-center text-white font-bold text-xs shadow-xs border-2 border-white';
-      const bg = getAvatarColor(name);
-      if (bg.includes('gradient')) el.style.background = bg;
-      else el.style.backgroundColor = bg;
-      el.style.width = `${size}px`;
-      el.style.height = `${size}px`;
-      el.innerText = (name === 'Meta AI') ? 'AI' : (name || '?').trim().charAt(0).toUpperCase();
-      return el;
     }
 
     // ==========================================
@@ -840,13 +915,15 @@
     }
 
     // ==========================================
-    // 首頁時間拉桿
+    // 雙頭時間拉桿 & 藍色區塊平移功能
     // ==========================================
     const rangeStart = document.getElementById('rangeStart');
     const rangeEnd = document.getElementById('rangeEnd');
     const rangeHighlight = document.getElementById('rangeHighlight');
     const rangeLabelText = document.getElementById('rangeLabelText');
+    const sliderContainer = document.getElementById('sliderContainer');
     const chkOnlyDM = document.getElementById('chkOnlyDM');
+    const chkExcludeMedia = document.getElementById('chkExcludeMedia');
 
     function setupTimeSliderBounds() {
       if (!allMessages.length) return;
@@ -884,10 +961,70 @@
       updateHomeCharts();
     }
 
+    function initSliderDrag() {
+      let isDragging = false;
+      let startX = 0;
+      let initialV1 = 0;
+      let initialV2 = 0;
+
+      const onMouseDown = (e) => {
+        isDragging = true;
+        startX = e.clientX || (e.touches && e.touches[0].clientX);
+        initialV1 = Math.min(Number(rangeStart.value), Number(rangeEnd.value));
+        initialV2 = Math.max(Number(rangeStart.value), Number(rangeEnd.value));
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+        document.addEventListener('touchmove', onMouseMove, { passive: false });
+        document.addEventListener('touchend', onMouseUp);
+        e.preventDefault();
+      };
+
+      const onMouseMove = (e) => {
+        if (!isDragging) return;
+        const currentX = e.clientX || (e.touches && e.touches[0].clientX);
+        const rect = sliderContainer.getBoundingClientRect();
+        const deltaPct = ((currentX - startX) / rect.width) * 100;
+        const span = initialV2 - initialV1;
+
+        let newV1 = initialV1 + deltaPct;
+        let newV2 = initialV2 + deltaPct;
+
+        if (newV1 < 0) {
+          newV1 = 0;
+          newV2 = span;
+        }
+        if (newV2 > 100) {
+          newV2 = 100;
+          newV1 = 100 - span;
+        }
+
+        rangeStart.value = newV1;
+        rangeEnd.value = newV2;
+        updateRangeHighlight();
+        updateHomeCharts();
+        if (e.cancelable) e.preventDefault();
+      };
+
+      const onMouseUp = () => {
+        isDragging = false;
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.removeEventListener('touchmove', onMouseMove);
+        document.removeEventListener('touchend', onMouseUp);
+      };
+
+      rangeHighlight.addEventListener('mousedown', onMouseDown);
+      rangeHighlight.addEventListener('touchstart', onMouseDown, { passive: false });
+    }
+
     rangeStart.addEventListener('input', onRangeInput);
     rangeEnd.addEventListener('input', onRangeInput);
     chkOnlyDM.addEventListener('change', updateHomeCharts);
+    chkExcludeMedia.addEventListener('change', updateHomeCharts);
 
+    // ==========================================
+    // 首頁圖表渲染 (排除影音與轉發貼文)
+    // ==========================================
     function updateHomeCharts() {
       if (!allMessages.length) return;
 
@@ -897,10 +1034,12 @@
       const startTime = globalMinTimestamp + (span * (v1 / 100));
       const endTime = globalMinTimestamp + (span * (v2 / 100));
       const onlyDM = chkOnlyDM.checked;
+      const excludeMedia = chkExcludeMedia.checked;
 
       const filtered = allMessages.filter(m => {
         if (m.timestamp_ms < startTime || m.timestamp_ms > endTime) return false;
         if (onlyDM && !directChatCache[m.chat]) return false;
+        if (excludeMedia && isMediaOrPostMessage(m.content)) return false;
         return true;
       });
 
@@ -959,7 +1098,15 @@
             y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { font: { size: 10 } } },
             x: {
               grid: { display: false },
-              ticks: { autoSkip: false, maxRotation: 35, minRotation: 35, font: { size: 11, weight: '600' }, color: '#4b5563' }
+              ticks: {
+                autoSkip: false,
+                maxRotation: 35,
+                minRotation: 35,
+                align: 'center',
+                crossAlign: 'center',
+                font: { size: 11, weight: '600' },
+                color: '#4b5563'
+              }
             }
           }
         }
@@ -979,7 +1126,10 @@
           plugins: { legend: { display: false } },
           scales: {
             y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
-            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+            x: {
+              grid: { display: false },
+              ticks: { font: { size: 10 }, align: 'center', crossAlign: 'center' }
+            }
           }
         }
       });
@@ -1072,7 +1222,7 @@
 ${memberProfiles}
 【重要核心準則 - 連續性與語意連貫】：
 1. 嚴格遵守語意連貫性！你必須嚴密針對使用者「剛剛說的最後一句話」進行真實且合理的回應。
-2. 嚴禁前言不對後語！嚴格禁止無厘頭突然跳痛切換話題，更嚴禁在沒有上下文提及的情況下突然猜測年齡、成績或數字（例如：若使用者只說「你猜啊」，你應順著調侃「猜錯有獎品嗎？」或反問，絕不可莫名其妙給出「大概20出頭吧？反正一定有過低標」這種缺乏前因後果的胡言亂語）。
+2. 嚴禁前言不對後語！嚴格禁止無厘頭突然跳痛切換話題，更嚴禁在沒有上下文提及的情況下突然猜測年齡、成績或數字。
 3. 只有當使用者在訊息中直接提到 "@Meta AI" 或 "＠Meta AI" 時，Meta AI 才可介入發言；其他一般話題下，Meta AI 必須保持沉默。
 4. 若使用者提及特定成員（例如 @某人），該成員必須首要回應。
 5. 嚴格輸出合法 JSON：
@@ -1137,7 +1287,6 @@ ${transcript}
         const clusters = groupContinuousMessages(savedHistory);
         clusters.forEach(c => renderMessageCluster(c, chatMessageFlow, 'bottom'));
 
-        // 如果這個房間正在背景運算，顯示對應成員的打字中指示器
         if (activeAiTasks.has(currentChatKey)) {
           showAiTyping(currentChatKey, activeAiTasks.get(currentChatKey).typingTarget);
         }
@@ -1175,7 +1324,7 @@ ${transcript}
     });
 
     // ==========================================
-    // 深度數據分析彈窗
+    // 深度數據分析彈窗 (3 大類別精確收斂)
     // ==========================================
     btnOpenRoomStats.addEventListener('click', () => {
       if (!currentChatKey) return;
@@ -1191,11 +1340,13 @@ ${transcript}
       const senderWords = {};
       const dailyHeatmapMap = {};
 
+      // 3 大類別統計 (reels_posts, media, links)
+      const senderMediaStats = {};
+
       const icebreakerCounts = {};
       const stopperCounts = {};
       const SIX_HOURS_MS = 6 * 3600 * 1000;
 
-      const sysNoticeRegex = /(liked a message|reacted .* to your message|video chat ended|started a video chat|audio call|missed call|傳送了.*個?附件|發送了.*個?附件|分享了.*的貼文|回覆了你的限時動態|已傳送語音訊息|已收回訊息|你已標註|移除了一則訊息)/i;
       const emojiRegex = /(\p{Extended_Pictographic}|\p{Emoji_Presentation})/gu;
 
       const techAndNoiseBlacklist = new Set([
@@ -1220,6 +1371,10 @@ ${transcript}
         }
       }
 
+      let totalRoomReelsPosts = 0;
+      let totalRoomMedia = 0;
+      let totalRoomLinks = 0;
+
       humanMsgs.forEach(m => {
         senderCounts[m.sender] = (senderCounts[m.sender] || 0) + 1;
         hours[m.date.getHours()]++;
@@ -1229,9 +1384,22 @@ ${transcript}
 
         if (!senderEmojis[m.sender]) senderEmojis[m.sender] = {};
         if (!senderWords[m.sender]) senderWords[m.sender] = {};
+        if (!senderMediaStats[m.sender]) {
+          senderMediaStats[m.sender] = { reels_posts: 0, media: 0, links: 0 };
+        }
 
         let content = m.content || '';
 
+        // 1. 3 大維度精確歸類
+        const cat = getMediaCategory(content);
+        if (cat) {
+          senderMediaStats[m.sender][cat]++;
+          if (cat === 'reels_posts') totalRoomReelsPosts++;
+          else if (cat === 'media') totalRoomMedia++;
+          else if (cat === 'links') totalRoomLinks++;
+        }
+
+        // 2. 提取 Emoji
         const foundEmojis = content.match(emojiRegex);
         if (foundEmojis) {
           foundEmojis.forEach(em => {
@@ -1241,7 +1409,8 @@ ${transcript}
           });
         }
 
-        if (sysNoticeRegex.test(content) || content.startsWith('[')) return;
+        // 3. 口頭禪過濾 (若包含影音、轉發貼文或附件通知則跳過)
+        if (cat || content.startsWith('[')) return;
 
         content = content.replace(/https?:\/\/[^\s]+/gi, ' ');
         content = content.replace(/[a-zA-Z0-9-]+\.(com|net|org|io|tw|app|co|xyz|ai|ly|me|cc|gov|edu)[^\s]*/gi, ' ');
@@ -1259,6 +1428,11 @@ ${transcript}
         });
       });
 
+      // 填充 3 大元素概覽卡片
+      document.getElementById('roomTotalReelsPosts').innerText = totalRoomReelsPosts.toLocaleString();
+      document.getElementById('roomTotalMedia').innerText = totalRoomMedia.toLocaleString();
+      document.getElementById('roomTotalLinks').innerText = totalRoomLinks.toLocaleString();
+
       const topIcebreaker = Object.entries(icebreakerCounts).sort((a,b) => b[1] - a[1])[0];
       const topStopper = Object.entries(stopperCounts).sort((a,b) => b[1] - a[1])[0];
 
@@ -1272,13 +1446,15 @@ ${transcript}
       const ctxPie = document.getElementById('roomPieChart').getContext('2d');
       if (chartInstances.roomPie) chartInstances.roomPie.destroy();
 
+      const pieColors = labels.map((name, idx) => AVATAR_COLORS[idx % AVATAR_COLORS.length]);
+
       chartInstances.roomPie = new Chart(ctxPie, {
         type: 'doughnut',
         data: {
           labels,
           datasets: [{
             data,
-            backgroundColor: labels.map(name => getAvatarColor(name)),
+            backgroundColor: pieColors,
             borderWidth: 2,
             borderColor: '#ffffff'
           }]
@@ -1304,7 +1480,7 @@ ${transcript}
       });
 
       renderHeatmap(dailyHeatmapMap);
-      renderPersonas(labels, senderEmojis, senderWords, icebreakerCounts, stopperCounts);
+      renderPersonas(labels, senderEmojis, senderWords, icebreakerCounts, stopperCounts, senderMediaStats);
 
       const ctxTime = document.getElementById('roomTimeChart').getContext('2d');
       if (chartInstances.roomTime) chartInstances.roomTime.destroy();
@@ -1320,8 +1496,11 @@ ${transcript}
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
-            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+            y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+            x: {
+              grid: { display: false },
+              ticks: { font: { size: 10 }, align: 'center', crossAlign: 'center' }
+            }
           }
         }
       });
@@ -1381,7 +1560,8 @@ ${transcript}
       }
     }
 
-    function renderPersonas(sortedSenders, emojisMap, wordsMap, iceMap, stopMap) {
+    // 渲染各成員卡片 (含 3 大類別明細)
+    function renderPersonas(sortedSenders, emojisMap, wordsMap, iceMap, stopMap, mediaMap) {
       const box = document.getElementById('roomPersonaContainer');
       box.innerHTML = '';
 
@@ -1393,6 +1573,8 @@ ${transcript}
         const topWords = Object.entries(wordsMap[sender] || {})
           .sort((a,b) => b[1] - a[1])
           .slice(0, 5);
+
+        const mStats = mediaMap[sender] || { reels_posts: 0, media: 0, links: 0 };
 
         const card = document.createElement('div');
         card.className = 'p-4 bg-white rounded-2xl border border-slate-200/80 flex flex-col gap-2.5 shadow-xs';
@@ -1411,6 +1593,22 @@ ${transcript}
             </div>
           </div>
 
+          <!-- 3 大類別明細標籤 -->
+          <div class="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
+            <span class="inline-flex items-center gap-1 bg-purple-50 text-purple-700 px-2.5 py-1 rounded-xl border border-purple-100 font-semibold" title="轉發短影音 Reels、IG貼文、Threads">
+              <span class="material-symbols-outlined text-[14px]">movie</span>
+              短影音與貼文 ${mStats.reels_posts}
+            </span>
+            <span class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-xl border border-emerald-100 font-semibold" title="純照片、相簿影片、語音、貼圖、GIF">
+              <span class="material-symbols-outlined text-[14px]">image</span>
+              影音媒體 ${mStats.media}
+            </span>
+            <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2.5 py-1 rounded-xl border border-amber-100 font-semibold" title="外部網址 (排除GIF)">
+              <span class="material-symbols-outlined text-[14px]">link</span>
+              外部網址 ${mStats.links}
+            </span>
+          </div>
+
           <div class="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100">
             <div class="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-100">
               <span class="text-[10px] font-bold text-slate-400">表情</span>
@@ -1427,7 +1625,6 @@ ${transcript}
       });
     }
 
-    // 匯出 JSON
     btnExportJson.addEventListener('click', () => {
       if (!currentChatKey) return;
       const data = {
@@ -1441,7 +1638,6 @@ ${transcript}
       a.click();
     });
 
-    // 歷史模式：清除 AI 問答紀錄
     btnHistoryClearAi.addEventListener('click', async () => {
       if (!currentChatKey) return;
       if (confirm(`確定清除與「${currentChatKey}」的所有 AI 問答紀錄？`)) {
@@ -1450,7 +1646,6 @@ ${transcript}
       }
     });
 
-    // AI 模式：清除模擬紀錄
     btnAiClearMem.addEventListener('click', async () => {
       if (!currentChatKey) return;
       if (confirm(`確定清除與「${currentChatKey}」的 AI 模擬紀錄？`)) {
@@ -1654,9 +1849,9 @@ ${sampleLogs}
       await dbPut("ai_history", key, hist);
     }
 
-    // =========================================================================
-    // 任務佇列與逐句真實打字流 (支援分段輸入中指示器 + 正確頭貼)
-    // =========================================================================
+    // ==========================================
+    // 任務佇列與逐句打字流
+    // ==========================================
     function enqueueAiTask(chatKey, userText, isNudge, nudgeTarget) {
       aiTaskQueue.push({ chatKey, userText, isNudge, nudgeTarget });
       processNextAiTask();
@@ -1668,11 +1863,9 @@ ${sampleLogs}
       const task = aiTaskQueue.shift();
       const abortController = new AbortController();
 
-      // 智慧預測最合理的發言者（絕對不會出現 "成員" / "成"）
       const initialTypingTarget = task.nudgeTarget || getProbableTypingTarget(task.chatKey, task.userText);
       activeAiTasks.set(task.chatKey, { abortController, typingTarget: initialTypingTarget });
 
-      // 如果使用者當前正在此聊天室，顯示打字中指示器
       if (currentChatKey === task.chatKey && currentMode === 'ai') {
         showAiTyping(task.chatKey, initialTypingTarget);
       }
@@ -1699,26 +1892,21 @@ ${sampleLogs}
           ? plan.messages.filter(m => m.sender === task.nudgeTarget).slice(0, 1)
           : plan.messages;
 
-        // 【核心逐句打字流】：每句話發送前都顯示該成員的輸入指示器
         for (let i = 0; i < responseMessages.length; i++) {
           const msg = responseMessages[i];
           const sender = msg.sender;
 
-          // 更新當前實際發言成員的指示器
           if (activeAiTasks.has(task.chatKey)) {
             activeAiTasks.get(task.chatKey).typingTarget = sender;
           }
 
-          // 1. 顯示該成員的輸入中跳動氣泡 (...)
           if (currentChatKey === task.chatKey && currentMode === 'ai') {
             showAiTyping(task.chatKey, sender);
           }
 
-          // 2. 擬真打字時延 (根據句子長度計算自然秒數)
           const typingDelay = Math.min(Math.max((msg.text.length * 45), 700), 2200);
           await sleep(typingDelay, signal);
 
-          // 3. 隱藏打字指示器並渲染該句話
           if (currentChatKey === task.chatKey) {
             hideAiTyping(task.chatKey);
           }
@@ -1729,17 +1917,14 @@ ${sampleLogs}
             timestamp_ms: Date.now()
           };
 
-          // 存入 DB
           await saveAiHistory(task.chatKey, msgObj);
           updateChatListPreview(task.chatKey, msg.text);
 
-          // 房間隔離渲染
           if (currentChatKey === task.chatKey && currentMode === 'ai') {
             renderMessageCluster([msgObj], chatMessageFlow, 'bottom');
             unifiedScrollBox.scrollTop = unifiedScrollBox.scrollHeight;
           }
 
-          // 若後面還有句子，稍作停頓再開始下一句的打字指示器
           if (i < responseMessages.length - 1) {
             await sleep(350, signal);
           }
@@ -1763,7 +1948,6 @@ ${sampleLogs}
       }
     }
 
-    // 呼叫 Gemini：注入最近即時對話，確保連貫性
     async function callGeminiAPI(chatKey, userText, signal, isNudge = false, nudgeTarget = null) {
       const key = localStorage.getItem('GEMINI_API_KEY');
       if (!key) throw new Error("請先至設定填寫 Gemini API Key");
@@ -1812,7 +1996,6 @@ ${recentDialog || '（這是新對話的第一句）'}
       return JSON.parse(json.candidates[0].content.parts[0].text);
     }
 
-    // 顯示打字指示器 (以指定真實發言者渲染)
     function showAiTyping(chatKey, name) {
       if (currentChatKey !== chatKey) return;
       hideAiTyping(chatKey);
@@ -1845,7 +2028,6 @@ ${recentDialog || '（這是新對話的第一句）'}
       });
     }
 
-    // 打招呼 (隨機選一位好友發起任務)
     document.getElementById('btnAiNudgeAction').addEventListener('click', () => {
       const chosenMember = aiGroupMembers[Math.floor(Math.random() * aiGroupMembers.length)] || "朋友";
       enqueueAiTask(currentChatKey, "[打招呼]", true, chosenMember);
